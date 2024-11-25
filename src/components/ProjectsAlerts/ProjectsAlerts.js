@@ -17,14 +17,12 @@ illegal under applicable law, and the grant of the foregoing license
 under the Apache 2.0 license is conditioned upon your compliance with
 such restriction.
 */
-import { MODELS_PAGE, NAME_FILTER } from '../../../constants'
+import ProjectAlertsView from './ProjectsAlertsView'
 
-export const filtersConfig = {
-  [NAME_FILTER]: { label: 'Name:', initialValue: '' }
+const ProjectsAlerts = () => {
+  return <ProjectAlertsView />
 }
 
-export const generatePageData = hideFilterMenu => ({
-  page: MODELS_PAGE,
-  hidePageActionMenu: true,
-  hideFilterMenu
-})
+ProjectsAlerts.propTypes = {}
+
+export default ProjectsAlerts

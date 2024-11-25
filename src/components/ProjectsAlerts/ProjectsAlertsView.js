@@ -17,14 +17,25 @@ illegal under applicable law, and the grant of the foregoing license
 under the Apache 2.0 license is conditioned upon your compliance with
 such restriction.
 */
-import { MODELS_PAGE, NAME_FILTER } from '../../../constants'
+import Breadcrumbs from '../../common/Breadcrumbs/Breadcrumbs'
 
-export const filtersConfig = {
-  [NAME_FILTER]: { label: 'Name:', initialValue: '' }
+const ProjectAlertsView = () => {
+  return (
+    <>
+      <div className="content-wrapper">
+        <div className="content__header">
+          <Breadcrumbs />
+        </div>
+        <div className="content">
+          <div className="table-container">
+            <div className="content__action-bar-wrapper">Project Alerts View</div>
+          </div>
+        </div>
+      </div>
+    </>
+  )
 }
 
-export const generatePageData = hideFilterMenu => ({
-  page: MODELS_PAGE,
-  hidePageActionMenu: true,
-  hideFilterMenu
-})
+ProjectAlertsView.propTypes = {}
+
+export default ProjectAlertsView

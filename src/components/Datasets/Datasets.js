@@ -26,11 +26,9 @@ import AddArtifactTagPopUp from '../../elements/AddArtifactTagPopUp/AddArtifactT
 import RegisterArtifactModal from '../RegisterArtifactModal/RegisterArtifactModal'
 
 import {
-  DATASETS_FILTERS,
   DATASETS_PAGE,
   DATASETS_TAB,
   DATASET_TYPE,
-  FILTER_MENU_MODAL,
   GROUP_BY_NAME,
   GROUP_BY_NONE,
   REQUEST_CANCELED
@@ -43,6 +41,7 @@ import {
 } from '../../reducers/artifactsReducer'
 import {
   checkForSelectedDataset,
+  filtersConfig,
   generateActionsMenu,
   generatePageData,
   handleApplyDetailsChanges,
@@ -62,6 +61,7 @@ import { useSortTable } from '../../hooks/useSortTable.hook'
 import { useVirtualization } from '../../hooks/useVirtualization.hook'
 import { useYaml } from '../../hooks/yaml.hook'
 import { useInitialTableFetch } from '../../hooks/useInitialTableFetch.hook'
+import { useFiltersFromSearchParams } from '../../hooks/useFiltersFromSearchParams.hook'
 
 import './datasets.scss'
 import cssVariables from './datasets.scss'
@@ -82,18 +82,11 @@ const Datasets = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const params = useParams()
-
+  const filters = useFiltersFromSearchParams(filtersConfig)
   const abortControllerRef = useRef(new AbortController())
   const tagAbortControllerRef = useRef(new AbortController())
   const datasetsRef = useRef(null)
 
-  const datasetsFilters = useMemo(
-    () => ({
-      name: filtersStore.name,
-      ...filtersStore[FILTER_MENU_MODAL][DATASETS_FILTERS].values
-    }),
-    [filtersStore]
-  )
   const pageData = useMemo(
     () => generatePageData(selectedDataset, viewMode, params),
     [selectedDataset, viewMode, params]
@@ -181,15 +174,19 @@ const Datasets = () => {
     [fetchData, fetchTags]
   )
 
+  const handleRefreshWithFilters = useCallback(() => {
+    handleRefresh(filters)
+  }, [filters, handleRefresh])
+
   const handleAddTag = useCallback(
     artifact => {
       openPopUp(AddArtifactTagPopUp, {
         artifact,
-        onAddTag: () => handleRefresh(datasetsFilters),
+        onAddTag: () => handleRefresh(filters),
         projectName: params.projectName
       })
     },
-    [handleRefresh, params.projectName, datasetsFilters]
+    [params.projectName, handleRefresh, filters]
   )
 
   const actionsMenu = useMemo(
@@ -202,13 +199,13 @@ const Datasets = () => {
         handleAddTag,
         params.projectName,
         handleRefresh,
-        datasetsFilters,
+        filters,
         menuPosition,
         selectedDataset
       ),
     [
-      datasetsFilters,
       dispatch,
+      filters,
       frontendSpec,
       handleAddTag,
       handleRefresh,
@@ -240,13 +237,13 @@ const Datasets = () => {
         navigate(
           `/projects/${params.projectName}/${DATASETS_PAGE.toLowerCase()}/${params.name}/${
             changes.data.tag.currentFieldValue
-          }/overview`,
+          }/overview${window.location.search}`,
           { replace: true }
         )
       }
     }
 
-    handleRefresh(datasetsFilters)
+    handleRefresh(filters)
   }
 
   const handleExpand = useCallback(
@@ -257,8 +254,8 @@ const Datasets = () => {
         return {
           ...state,
           [dataSetIdentifier]: {
-            content: sortListByDate(content[dataset.db_key ?? dataset.key], 'updated', false).map(contentItem =>
-              createDatasetsRowData(contentItem, params.projectName, false)
+            content: sortListByDate(content[dataset.db_key ?? dataset.key], 'updated', false).map(
+              contentItem => createDatasetsRowData(contentItem, params.projectName, false)
             ),
             error: null,
             loading: false
@@ -297,11 +294,11 @@ const Datasets = () => {
   const tableContent = useMemo(() => {
     return filtersStore.groupBy === GROUP_BY_NAME
       ? latestItems.map(contentItem => {
-        return createDatasetsRowData(contentItem, params.projectName, frontendSpec, true)
-      })
+          return createDatasetsRowData(contentItem, params.projectName, frontendSpec, true)
+        })
       : datasets.map(contentItem =>
-        createDatasetsRowData(contentItem, params.projectName, frontendSpec)
-      )
+          createDatasetsRowData(contentItem, params.projectName, frontendSpec)
+        )
   }, [datasets, filtersStore.groupBy, frontendSpec, latestItems, params.projectName])
 
   const tableHeaders = useMemo(() => tableContent[0]?.content ?? [], [tableContent])
@@ -321,8 +318,8 @@ const Datasets = () => {
     createRowData: rowItem => createDatasetsRowData(rowItem, params.projectName, frontendSpec),
     fetchData,
     fetchTags,
-    filterModalName: DATASETS_FILTERS,
-    filters: datasetsFilters,
+    filterModalName: DATASETS_PAGE,
+    filters,
     setExpandedRowsData: setSelectedRowData,
     sortExpandedRowsDataBy: 'updated'
   })
@@ -377,12 +374,10 @@ const Datasets = () => {
     openPopUp(RegisterArtifactModal, {
       artifactKind: DATASET_TYPE,
       params,
-      refresh: () => handleRefresh(datasetsFilters),
+      refresh: () => handleRefresh(filters),
       title: registerDatasetTitle
     })
-  }, [handleRefresh, params, datasetsFilters])
-
-  useEffect(() => setDatasets([]), [filtersStore.tag])
+  }, [params, handleRefresh, filters])
 
   const virtualizationConfig = useVirtualization({
     rowsData: {
@@ -407,10 +402,12 @@ const Datasets = () => {
       convertedYaml={convertedYaml}
       datasets={datasets}
       detailsFormInitialValues={detailsFormInitialValues}
+      filters={filters}
       filtersStore={filtersStore}
       getAndSetSelectedArtifact={getAndSetSelectedArtifact}
       handleExpandRow={handleExpandRow}
       handleRefresh={handleRefresh}
+      handleRefreshWithFilters={handleRefreshWithFilters}
       handleRegisterDataset={handleRegisterDataset}
       maxArtifactsErrorIsShown={maxArtifactsErrorIsShown}
       pageData={pageData}
@@ -418,10 +415,8 @@ const Datasets = () => {
       requestErrorMessage={requestErrorMessage}
       selectedDataset={selectedDataset}
       selectedRowData={selectedRowData}
-      setDatasets={setDatasets}
       setMaxArtifactsErrorIsShown={setMaxArtifactsErrorIsShown}
       setSelectedDatasetMin={setSelectedDatasetMin}
-      setSelectedRowData={setSelectedRowData}
       sortProps={{ sortTable, selectedColumnName, getSortingIcon }}
       tableContent={sortedTableContent}
       tableHeaders={sortedTableHeaders}

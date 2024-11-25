@@ -27,15 +27,15 @@ import Table from '../Table/Table'
 import ArtifactsTableRow from '../../elements/ArtifactsTableRow/ArtifactsTableRow'
 import YamlModal from '../../common/YamlModal/YamlModal'
 import Loader from '../../common/Loader/Loader'
-import ArtifactsActionBar from '../ArtifactsActionBar/ArtifactsActionBar'
 import NoData from '../../common/NoData/NoData'
 import Details from '../Details/Details'
 import WarningMessage from '../../common/WarningMessage/WarningMessage'
+import ActionBar from '../ActionBar/ActionBar'
+import ArtifactsFilters from '../ArtifactsActionBar/ArtifactsFilters'
 
-import { DATASETS_FILTERS, DATASETS_PAGE, FULL_VIEW_MODE } from '../../constants'
+import { DATASETS_PAGE, FULL_VIEW_MODE } from '../../constants'
 import { getNoDataMessage } from '../../utils/getNoDataMessage'
-import { registerDatasetTitle, filters } from './datasets.util'
-import { removeDataSet } from '../../reducers/artifactsReducer'
+import { registerDatasetTitle, filtersConfig } from './datasets.util'
 import { ACTIONS_MENU, VIRTUALIZATION_CONFIG } from '../../types'
 import { SECONDARY_BUTTON } from 'igz-controls/constants'
 import { SORT_PROPS } from 'igz-controls/types'
@@ -51,20 +51,20 @@ const DatasetsView = React.forwardRef(
       convertedYaml,
       datasets,
       detailsFormInitialValues,
+      filters,
       filtersStore,
       getAndSetSelectedArtifact,
       handleExpandRow,
       handleRefresh,
+      handleRefreshWithFilters,
       handleRegisterDataset,
       maxArtifactsErrorIsShown,
       pageData,
       requestErrorMessage,
       selectedDataset,
       selectedRowData,
-      setDatasets,
       setMaxArtifactsErrorIsShown,
       setSelectedDatasetMin,
-      setSelectedRowData,
       sortProps,
       tableContent,
       tableHeaders,
@@ -84,7 +84,7 @@ const DatasetsView = React.forwardRef(
             {artifactsStore.loading && <Loader />}
             <div className="table-container">
               <div className="content__action-bar-wrapper">
-                <ArtifactsActionBar
+                <ActionBar
                   actionButtons={[
                     {
                       variant: SECONDARY_BUTTON,
@@ -93,29 +93,32 @@ const DatasetsView = React.forwardRef(
                       onClick: handleRegisterDataset
                     }
                   ]}
-                  artifacts={datasets}
-                  filterMenuName={DATASETS_FILTERS}
+                  filters={filters}
+                  filtersConfig={filtersConfig}
                   handleRefresh={handleRefresh}
                   page={DATASETS_PAGE}
-                  removeSelectedItem={removeDataSet}
-                  setContent={setDatasets}
-                  setSelectedRowData={setSelectedRowData}
-                />
+                  withRefreshButton
+                  withoutExpandButton
+                >
+                  <ArtifactsFilters artifacts={datasets} />
+                </ActionBar>
               </div>
               {artifactsStore.loading ? null : datasets.length === 0 ? (
                 <NoData
                   message={getNoDataMessage(
-                    filtersStore,
                     filters,
+                    filtersConfig,
                     requestErrorMessage,
                     DATASETS_PAGE,
                     null,
-                    DATASETS_FILTERS
+                    filtersStore
                   )}
                 />
               ) : (
                 <>
-                  {(selectedRowData.loading || artifactsStore.dataSets.datasetLoading) && <Loader />}
+                  {(selectedRowData.loading || artifactsStore.dataSets.datasetLoading) && (
+                    <Loader />
+                  )}
                   {maxArtifactsErrorIsShown && (
                     <WarningMessage
                       message="The query response displays up to 1000 items. Use filters to narrow down the results."
@@ -129,7 +132,7 @@ const DatasetsView = React.forwardRef(
                     detailsFormInitialValues={detailsFormInitialValues}
                     handleCancel={() => setSelectedDatasetMin({})}
                     pageData={pageData}
-                    retryRequest={handleRefresh}
+                    retryRequest={handleRefreshWithFilters}
                     selectedItem={selectedDataset}
                     sortProps={sortProps}
                     tableClassName="datasets-table"
@@ -189,19 +192,19 @@ DatasetsView.propTypes = {
   datasets: PropTypes.arrayOf(PropTypes.object).isRequired,
   detailsFormInitialValues: PropTypes.object.isRequired,
   getAndSetSelectedArtifact: PropTypes.func.isRequired,
+  filters: PropTypes.object.isRequired,
   filtersStore: PropTypes.object.isRequired,
   handleExpandRow: PropTypes.func.isRequired,
   handleRefresh: PropTypes.func.isRequired,
+  handleRefreshWithFilters: PropTypes.func.isRequired,
   handleRegisterDataset: PropTypes.func.isRequired,
   maxArtifactsErrorIsShown: PropTypes.bool.isRequired,
   pageData: PropTypes.object.isRequired,
   requestErrorMessage: PropTypes.string.isRequired,
   selectedDataset: PropTypes.object.isRequired,
   selectedRowData: PropTypes.object.isRequired,
-  setDatasets: PropTypes.func.isRequired,
   setMaxArtifactsErrorIsShown: PropTypes.func.isRequired,
   setSelectedDatasetMin: PropTypes.func.isRequired,
-  setSelectedRowData: PropTypes.func.isRequired,
   sortProps: SORT_PROPS,
   tableContent: PropTypes.arrayOf(PropTypes.object).isRequired,
   tableHeaders: PropTypes.arrayOf(PropTypes.object).isRequired,
