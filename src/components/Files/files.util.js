@@ -37,7 +37,8 @@ import {
   NAME_FILTER,
   SHOW_ITERATIONS,
   TAG_FILTER,
-  TAG_FILTER_LATEST
+  TAG_FILTER_LATEST,
+  VIEW_SEARCH_PARAMETER
 } from '../../constants'
 import { applyTagChanges, chooseOrFetchArtifact } from '../../utils/artifacts.util'
 import { copyToClipboard } from '../../utils/copyToClipboard'
@@ -153,7 +154,7 @@ export const checkForSelectedFile = (
         )
 
         if (!searchItem) {
-          navigate(`/projects/${projectName}/files${getFilteredSearchParams(window.location.search, ['view'])}`, { replace: true })
+          navigate(`/projects/${projectName}/files${getFilteredSearchParams(window.location.search, [VIEW_SEARCH_PARAMETER])}`, { replace: true })
         } else {
           setSelectedFile(prevState => {
             return isEqual(prevState, searchItem) ? prevState : searchItem
@@ -176,7 +177,8 @@ export const generateActionsMenu = (
   handleRefresh,
   filters,
   menuPosition,
-  selectedFile
+  selectedFile,
+  isDetailsPopUp = false
 ) => {
   const isTargetPathValid = getIsTargetPathValid(fileMin ?? {}, frontendSpec)
 
@@ -188,7 +190,7 @@ export const generateActionsMenu = (
     [
       {
         label: 'Add a tag',
-        hidden: menuPosition === ACTION_MENU_PARENT_ROW_EXPANDED,
+        hidden: menuPosition === ACTION_MENU_PARENT_ROW_EXPANDED || isDetailsPopUp,
         icon: <TagIcon />,
         onClick: handleAddTag
       },
@@ -232,7 +234,7 @@ export const generateActionsMenu = (
       {
         label: 'Delete',
         icon: <Delete />,
-        hidden: [ACTION_MENU_PARENT_ROW, ACTION_MENU_PARENT_ROW_EXPANDED].includes(menuPosition),
+        hidden: [ACTION_MENU_PARENT_ROW, ACTION_MENU_PARENT_ROW_EXPANDED].includes(menuPosition) || isDetailsPopUp,
         className: 'danger',
         onClick: () =>
           openPopUp(DeleteArtifactPopUp, {
@@ -246,7 +248,7 @@ export const generateActionsMenu = (
       {
         label: 'Delete all',
         icon: <Delete />,
-        hidden: ![ACTION_MENU_PARENT_ROW, ACTION_MENU_PARENT_ROW_EXPANDED].includes(menuPosition),
+        hidden: ![ACTION_MENU_PARENT_ROW, ACTION_MENU_PARENT_ROW_EXPANDED].includes(menuPosition) || isDetailsPopUp,
         className: 'danger',
         onClick: () =>
           openDeleteConfirmPopUp(

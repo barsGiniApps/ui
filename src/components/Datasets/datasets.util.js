@@ -36,7 +36,8 @@ import {
   NAME_FILTER,
   SHOW_ITERATIONS,
   TAG_FILTER,
-  TAG_FILTER_LATEST
+  TAG_FILTER_LATEST,
+  VIEW_SEARCH_PARAMETER
 } from '../../constants'
 import { PRIMARY_BUTTON } from 'igz-controls/constants'
 import { applyTagChanges, chooseOrFetchArtifact } from '../../utils/artifacts.util'
@@ -105,7 +106,7 @@ export const generateDataSetsDetailsMenu = selectedItem => [
   }
 ]
 
-export const generatePageData = (selectedItem, viewMode, params) => ({
+export const generatePageData = (selectedItem, viewMode, params, isDetailsPopUp = false) => ({
   page: DATASETS_PAGE,
   details: {
     menu: generateDataSetsDetailsMenu(selectedItem),
@@ -115,6 +116,7 @@ export const generatePageData = (selectedItem, viewMode, params) => ({
     withToggleViewBtn: true,
     actionButton: {
       label: 'Train',
+      hidden: isDetailsPopUp,
       variant: PRIMARY_BUTTON,
       onClick: () => handleTrainDataset(selectedItem, params)
     }
@@ -167,7 +169,10 @@ export const checkForSelectedDataset = (
         )
 
         if (!searchItem) {
-          navigate(`/projects/${projectName}/datasets${getFilteredSearchParams(window.location.search, ['view'])}`, { replace: true })
+          navigate(
+            `/projects/${projectName}/datasets${getFilteredSearchParams(window.location.search, [VIEW_SEARCH_PARAMETER])}`,
+            { replace: true }
+          )
         } else {
           setSelectedDataset(prevState => {
             return isEqual(prevState, searchItem) ? prevState : searchItem
@@ -190,7 +195,8 @@ export const generateActionsMenu = (
   handleRefresh,
   datasetsFilters,
   menuPosition,
-  selectedDataset
+  selectedDataset,
+  isDetailsPopUp = false
 ) => {
   const isTargetPathValid = getIsTargetPathValid(datasetMin ?? {}, frontendSpec)
   const datasetDataCouldBeDeleted =
@@ -204,7 +210,7 @@ export const generateActionsMenu = (
     [
       {
         label: 'Add a tag',
-        hidden: menuPosition === ACTION_MENU_PARENT_ROW_EXPANDED,
+        hidden: menuPosition === ACTION_MENU_PARENT_ROW_EXPANDED || isDetailsPopUp,
         icon: <TagIcon />,
         onClick: handleAddTag
       },
@@ -248,7 +254,7 @@ export const generateActionsMenu = (
       {
         label: 'Delete',
         icon: <Delete />,
-        hidden: [ACTION_MENU_PARENT_ROW, ACTION_MENU_PARENT_ROW_EXPANDED].includes(menuPosition),
+        hidden: [ACTION_MENU_PARENT_ROW, ACTION_MENU_PARENT_ROW_EXPANDED].includes(menuPosition) || isDetailsPopUp,
         className: 'danger',
         onClick: () =>
           datasetDataCouldBeDeleted
@@ -278,7 +284,9 @@ export const generateActionsMenu = (
       {
         label: 'Delete all',
         icon: <Delete />,
-        hidden: ![ACTION_MENU_PARENT_ROW, ACTION_MENU_PARENT_ROW_EXPANDED].includes(menuPosition),
+        hidden:
+          isDetailsPopUp ||
+          ![ACTION_MENU_PARENT_ROW, ACTION_MENU_PARENT_ROW_EXPANDED].includes(menuPosition),
         className: 'danger',
         onClick: () =>
           openDeleteConfirmPopUp(
