@@ -17,9 +17,29 @@ illegal under applicable law, and the grant of the foregoing license
 under the Apache 2.0 license is conditioned upon your compliance with
 such restriction.
 */
-export const selectOptions = {
-  secretKind: [
-    { label: 'File', id: 'file' },
-    { label: 'Env', id: 'env' }
-  ]
+import { mainHttpClient } from '../httpClient'
+
+const alertsApi = {
+  getAlerts: (project, filters, config = {}) => {
+    // TODO:ML-8514 update newConfig
+    const newConfig = {
+      ...config,
+      params: {
+        ...config.params
+      }
+    }
+    return mainHttpClient.get(`/projects/${project}/alert-activations`, newConfig)
+  },
+  getAlert: (project, alertName, config) => {
+    // TODO:ML-8514 update newConfig
+    const newConfig = {
+      ...config,
+      params: {
+        ...config.params
+      }
+    }
+    return mainHttpClient.get('/projects/{project}/alerts/{alertName}/activations', newConfig)
+  }
 }
+
+export default alertsApi

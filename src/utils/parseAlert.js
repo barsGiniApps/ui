@@ -17,30 +17,15 @@ illegal under applicable law, and the grant of the foregoing license
 under the Apache 2.0 license is conditioned upon your compliance with
 such restriction.
 */
-import { useCallback, useMemo } from 'react'
-
-import ProjectAlertsView from './ProjectsAlertsView'
-
-import { getAlertsFiltersConfig, parseAlertsQueryParamsCallback } from './alerts.util'
-import { useFiltersFromSearchParams } from '../../hooks/useFiltersFromSearchParams.hook'
-
-const ProjectsAlerts = () => {
-  const alertsFiltersConfig = useMemo(() => getAlertsFiltersConfig(), [])
-
-  const alertsFilters = useFiltersFromSearchParams(
-    alertsFiltersConfig,
-    parseAlertsQueryParamsCallback
-  )
-
-  const refreshAlertsCallback = useCallback(() => {}, [])
-
-  return (
-    <ProjectAlertsView
-      filters={alertsFilters}
-      alertsFiltersConfig={alertsFiltersConfig}
-      refreshAlertsCallback={refreshAlertsCallback}
-    />
-  )
+export const parseAlerts = alerts => {
+  return alerts.map(alert => {
+    return {
+      ...alert,
+      ui: {
+        ...alert,
+        identifier: `${alert.id.slice(-6)}`,
+        identifierUnique: `${alert.name}.${alert.id.slice(-6)}`
+      }
+    }
+  })
 }
-
-export default ProjectsAlerts
