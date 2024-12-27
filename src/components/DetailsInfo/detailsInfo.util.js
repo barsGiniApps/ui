@@ -17,7 +17,8 @@ illegal under applicable law, and the grant of the foregoing license
 under the Apache 2.0 license is conditioned upon your compliance with
 such restriction.
 */
-import { capitalize, isNil, isNumber } from 'lodash'
+import { capitalize, isNil, isNumber, upperFirst } from 'lodash'
+import classNames from 'classnames'
 
 import DetailsInfoItem from '../../elements/DetailsInfoItem/DetailsInfoItem'
 
@@ -25,6 +26,7 @@ import { Tip } from 'igz-controls/components'
 import JobPopUp from '../../elements/DetailsPopUp/JobPopUp/JobPopUp'
 
 import {
+  ALERTS_PAGE,
   FEATURE_STORE_PAGE,
   FILES_PAGE,
   FUNCTION_TYPE_APPLICATION,
@@ -32,13 +34,32 @@ import {
   MODEL_ENDPOINTS_TAB,
   MLRUN_STORAGE_INPUT_PATH_SCHEME
 } from '../../constants'
-import { formatDatetime, parseUri } from '../../utils'
+import { formatDatetime, parseKeyValues, parseUri } from '../../utils'
 import { getChipOptions } from '../../utils/getChipOptions'
 import { getLimitsGpuType } from '../../elements/FormResourcesUnits/formResourcesUnits.util'
 import { isEveryObjectValueEmpty } from '../../utils/isEveryObjectValueEmpty'
 import { roundFloats } from '../../utils/roundFloats'
 import { generateFunctionPriorityLabel } from '../../utils/generateFunctionPriorityLabel'
 import { openPopUp } from 'igz-controls/utils/common.util'
+
+export const generateTriggerInfoContent = criteria => {
+  if (criteria) {
+    return [
+      {
+        label: 'Trigger criteria count',
+        id: 'triggerCriteriaCount',
+        value: criteria?.count
+      },
+      {
+        label: 'Trigger criteria time period',
+        id: 'triggerCriteriaTimePeriod',
+        value: criteria?.period
+      }
+    ]
+  }
+
+  return []
+}
 
 export const generateArtifactsInfoContent = (page, pageTab, selectedItem) => {
   if (pageTab === MODEL_ENDPOINTS_TAB) {
@@ -196,49 +217,130 @@ export const generateDriftDetailsInfo = modelEndpoint => {
     : []
 }
 
-export const generateProducerDetailsInfo = (selectedItem, isDetailsPopUp) => {
-  if (!isEveryObjectValueEmpty(selectedItem) && selectedItem.producer) {
-    return Object.entries(selectedItem.producer).map(([key, value]) => {
-      let producerData = {}
-      let isUri = key === 'uri'
-      const handleOpenJobDetails = jobData => {
-        openPopUp(JobPopUp, { jobData })
-      }
-
-      if (isUri) {
-        // value is in the form of: project/uid-iteration
-        const [project, rest] = value.split('/')
-        const [uid, iter] = rest?.split('-') ?? []
-
-        producerData = {
-          project,
-          uid,
-          iter
-        }
-      }
-
-      return (
-        <li className="details-item" key={key}>
-          <div className="details-item__header">
-            {key === 'uri' || key === 'uid' ? key.toUpperCase() : capitalize(key)}:
-            {key === 'uid' && (
-              <Tip
-                className="details-item__tip"
-                text="Unique identifier representing the job or the workflow that generated the artifact"
-              />
-            )}
+export const generateAlertsDetailsInfo = selectedItem => {
+  if (selectedItem.page === ALERTS_PAGE) {
+    const triggerCriteriaContent = generateTriggerInfoContent(selectedItem?.criteria)
+    const AlertsDetailsInfo = {
+      notificationsDetailsInfo: [],
+      triggerCriteriaDetailsInfo: []
+    }
+    const notifications = selectedItem?.notifications
+    AlertsDetailsInfo.notificationsDetailsInfo = notifications.map((notification, index) => (
+      <li className="notifications-item" key={index}>
+        <div className="notifications-item_icon">{notification.icon}</div>
+        <div>
+          <div className="notifications-item__header">{upperFirst(notification.kind)}</div>
+          <div className="notifications-item__header-text">
+            {`${notification.succeeded} success `}
+            <span
+              className={classNames(
+                'notifications-item__header-text_failed',
+                notification.failed > 0 && 'notifications-item__header-text_success'
+              )}
+            >
+              {`${notification.failed} failed`}
+            </span>
           </div>
-          <DetailsInfoItem
-            item={{
-              shouldPopUp: isUri,
-              handleClick: () => isUri && handleOpenJobDetails(producerData)
-            }}
-            info={value}
-            isDetailsPopUp={isDetailsPopUp}
-          />
+        </div>
+      </li>
+    ))
+
+    AlertsDetailsInfo.triggerCriteriaDetailsInfo = triggerCriteriaContent.map(trigger => {
+      return (
+        <li className="details-item" key={trigger.id}>
+          <div className="alert-row__details-alert-header">{trigger.label}:</div>
+          <DetailsInfoItem info={trigger.value} />
         </li>
       )
     })
+
+    return AlertsDetailsInfo
+  } else {
+    return []
+  }
+}
+
+const producerListOrder = ['name', 'kind', 'tag', 'uri', 'owner', 'uid', 'workflow']
+
+export const generateProducerDetailsInfo = (selectedItem, isDetailsPopUp) => {
+  if (!isEveryObjectValueEmpty(selectedItem) && selectedItem.producer) {
+    return Object.entries(selectedItem.producer)
+      .sort((a, b) => producerListOrder.indexOf(a[0]) - producerListOrder.indexOf(b[0]))
+      .map(([key, value]) => {
+        let producerData = {}
+        let isUri = key === 'uri'
+        const handleOpenJobDetails = jobData => {
+          openPopUp(JobPopUp, { jobData })
+        }
+
+        if (isUri) {
+          // value is in the form of: project/uid-iteration
+          const [project, rest] = value.split('/')
+          const [uid, iter] = rest?.split('-') ?? []
+
+          producerData = {
+            project,
+            uid,
+            iter
+          }
+        }
+
+        return (
+          <li className="details-item" key={key}>
+            <div className="details-item__header">
+              {key === 'uri' || key === 'uid' ? key.toUpperCase() : capitalize(key)}:
+              {key === 'uid' && (
+                <Tip
+                  className="details-item__tip"
+                  text="Unique identifier representing the job or the workflow that generated the artifact"
+                />
+              )}
+            </div>
+            <DetailsInfoItem
+              item={{
+                shouldPopUp: isUri,
+                handleClick: () => isUri && handleOpenJobDetails(producerData)
+              }}
+              info={value}
+              isDetailsPopUp={isDetailsPopUp}
+            />
+          </li>
+        )
+      })
+  }
+}
+
+export const generateDocumentLoaderDetailsInfo = (selectedItem, isDetailsPopUp) => {
+  if (!isEveryObjectValueEmpty(selectedItem) && selectedItem.document_loader) {
+    return (
+      <>
+        <li className="details-item" key="class">
+          <div className="details-item__header">Class</div>
+          <DetailsInfoItem
+            info={selectedItem.document_loader.loader_class_name}
+            isDetailsPopUp={isDetailsPopUp}
+          />
+        </li>
+        <li className="details-item" key="source_name">
+          <div className="details-item__header">Source name</div>
+          <DetailsInfoItem
+            info={selectedItem.document_loader.src_name}
+            isDetailsPopUp={isDetailsPopUp}
+          />
+        </li>
+        <li className="details-item" key="parameters">
+          <div className="details-item__header">Parameters</div>
+          <DetailsInfoItem
+            chipsData={{
+              chips: parseKeyValues(selectedItem.document_loader.kwargs),
+              chipOptions: getChipOptions('results'),
+              isEditEnabled: false
+            }}
+            isDetailsPopUp={isDetailsPopUp}
+          />
+        </li>
+      </>
+    )
   }
 }
 

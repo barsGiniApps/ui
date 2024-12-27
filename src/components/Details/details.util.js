@@ -22,6 +22,7 @@ import { get, isEmpty, isEqual, cloneDeep } from 'lodash'
 import ArtifactPopUp from '../../elements/DetailsPopUp/ArtifactPopUp/ArtifactPopUp'
 import FunctionPopUp from '../../elements/DetailsPopUp/FunctionPopUp/FunctionPopUp'
 import FeatureSetPopUp from '../../elements/DetailsPopUp/FeatureSetPopUp/FeatureSetPopUp'
+import JobPopUp from '../../elements/DetailsPopUp/JobPopUp/JobPopUp'
 
 import {
   DATASETS_PAGE,
@@ -32,7 +33,8 @@ import {
   FUNCTION_TYPE_APPLICATION,
   FUNCTION_TYPE_LOCAL,
   MODEL_ENDPOINTS_TAB,
-  MODELS_TAB
+  MODELS_TAB,
+  TAG_LATEST
 } from '../../constants'
 import { formatDatetime, generateLinkPath, parseUri } from '../../utils'
 import { isArtifactTagUnique } from '../../utils/artifacts.util'
@@ -107,12 +109,19 @@ export const generateArtifactsContent = (detailsType, selectedItem, projectName)
           name: 'tag',
           validationRules: {
             name: 'common.tag',
-            additionalRules: {
-              name: 'tagUniqueness',
-              label: 'Artifact tag must be unique',
-              pattern: isArtifactTagUnique(projectName, detailsType, selectedItem),
-              async: true
-            }
+            additionalRules: [
+              {
+                name: 'tagUniqueness',
+                label: 'Tag name must be unique',
+                pattern: isArtifactTagUnique(projectName, detailsType, selectedItem),
+                async: true
+              },
+              {
+                name: 'latest',
+                label: 'Tag name "latest" is reserved',
+                pattern: value => value !== TAG_LATEST
+              }
+            ]
           }
         },
         handleDiscardChanges: (formState, detailsStore) => {
@@ -143,6 +152,10 @@ export const generateArtifactsContent = (detailsType, selectedItem, projectName)
         value: selectedItem.target_path,
         copyToClipboard: true
       },
+      original_source: {
+        value: selectedItem.original_source,
+        copyToClipboard: true
+      },
       target_uri: {
         value: selectedItem.URI,
         copyToClipboard: true
@@ -160,6 +173,10 @@ export const generateArtifactsContent = (detailsType, selectedItem, projectName)
       tree: {
         value: selectedItem.tree,
         copyToClipboard: selectedItem.tree?.length > 0
+      },
+      uid: {
+        value: selectedItem.uid,
+        copyToClipboard: selectedItem.uid?.length > 0
       },
       updated: {
         value: formatDatetime(selectedItem.updated, 'N/A')
@@ -187,6 +204,56 @@ export const generateFeatureStoreContent = (detailsType, selectedItem) => {
     return generateFeatureSetsOverviewContent(selectedItem)
   } else if (detailsType === FEATURE_VECTORS_TAB) {
     return generateFeatureVectorsOverviewContent(selectedItem)
+  }
+}
+
+export const generateAlertsContent = selectedItem => {
+  return {
+    uid: {
+      value: selectedItem.uid
+    },
+    endpoint_name: {
+      value: selectedItem.endpointName
+    },
+    projectName: {
+      value: selectedItem.project
+    },
+    jobName: {
+      value: selectedItem?.job?.name
+    },
+    applicationName: {
+      value: selectedItem.applicationName
+    },
+    type: {
+      value: selectedItem?.entityType?.detailsValue
+    },
+    timestamp: {
+      value: selectedItem?.activationTime
+    },
+    severity: {
+      value: selectedItem?.severity?.value
+    },
+    job: {
+      value: selectedItem?.job?.jobUid,
+      shouldPopUp: !isEmpty(selectedItem?.job?.jobUid),
+      handleClick: () =>
+        openPopUp(JobPopUp, {
+          jobData: {
+            project: selectedItem?.job?.name,
+            uid: selectedItem?.job?.jobUid,
+            iter: 0
+          }
+        })
+    },
+    triggerCriteriaCount: {
+      value: selectedItem.criteria.count
+    },
+    triggerCriteriaTimePeriod: {
+      value: selectedItem.criteria.period
+    },
+    notifications: {
+      value: selectedItem.notifications
+    }
   }
 }
 

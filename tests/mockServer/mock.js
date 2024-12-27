@@ -23,6 +23,7 @@ import yaml from 'js-yaml'
 import fs from 'fs'
 import crypto from 'node:crypto'
 import {
+  chain,
   chunk,
   clamp,
   cloneDeep,
@@ -34,6 +35,7 @@ import {
   isEmpty,
   isFunction,
   isNil,
+  maxBy,
   noop,
   omit,
   orderBy,
@@ -377,6 +379,13 @@ function filterByLabels(elementLabels, requestLabels) {
   return false
 }
 
+function getPartitionedData(listOfItems, pathToPartition, pathToUpdated, defaultPathToPartition) {
+  return chain(listOfItems)
+    .groupBy(arrayItem => get(arrayItem, pathToPartition, defaultPathToPartition))
+    .map(group => maxBy(group, groupItem => new Date(get(groupItem, pathToUpdated))))
+    .value()
+}
+
 // Request Handlers
 function getFrontendSpec(req, res) {
   res.send(frontendSpec)
@@ -427,10 +436,10 @@ function getFeatureSet(req, res) {
 
   if (req.query['format'] === 'minimal') {
     collectedFeatureSets = collectedFeatureSets.map(featureSet => {
-      const metadataFields = ['description', 'name', 'project', 'tag', 'uid', 'labels'].map(
+      const metadataFields = ['name', 'project', 'tag', 'uid', 'labels'].map(
         fieldName => `metadata.${fieldName}`
       )
-      const specFields = ['entities', 'targets', 'engine'].map(fieldName => `spec.${fieldName}`)
+      const specFields = ['description', 'entities', 'targets', 'engine'].map(fieldName => `spec.${fieldName}`)
 
       return pick(featureSet, ['kind', ...metadataFields, 'status.state', ...specFields])
     })
@@ -839,17 +848,7 @@ function getRuns(req, res) {
   }
 
   if (req.query['partition-by'] && req.query['partition-sort-by']) {
-    const uniqueObjects = {}
-
-    collectedRuns.forEach(run => {
-      const name = run.metadata.name
-      const lastUpdate = new Date(run.status.last_update)
-
-      if (!uniqueObjects[name] || new Date(uniqueObjects[name].status.last_update) < lastUpdate) {
-        uniqueObjects[name] = run
-      }
-    })
-    collectedRuns = Object.values(uniqueObjects)
+    collectedRuns = getPartitionedData(collectedRuns, 'metadata.name', 'status.last_update')
   }
 
   if (req.query['name']) {
@@ -880,7 +879,52 @@ function getRun(req, res) {
 
 function getAlerts(req, res) {
   // TODO:ML-8514 Update getAlerts to support both parameters and query strings.
-  res.send({ alerts: alerts.activations })
+  let collectedAlerts = alerts.activations
+
+  const [paginatedAlerts, pagination] = getPaginationConfig(collectedAlerts, req.query)
+
+  if (req.query['name']) {
+    collectedAlerts = collectedAlerts.filter(schedule =>
+      schedule.name.includes(req.query['name'].slice(1))
+    )
+  }
+  if (req.query['severity']) {
+    collectedAlerts = collectedAlerts.filter(schedule =>
+      schedule.severity.includes(req.query['severity'])
+    )
+  }
+  if (req.query['entity-kind']) {
+    collectedAlerts = collectedAlerts.filter(schedule =>
+      schedule.entity_kind.includes(req.query['entity-kind'])
+    )
+  }
+  if (req.query['event-kind']) {
+    collectedAlerts = collectedAlerts.filter(schedule =>
+      schedule.event_kind.includes(req.query['event-kind'])
+    )
+  }
+
+  if (req.query['entity']) {
+    collectedAlerts = collectedAlerts.filter(schedule =>
+      schedule.name.includes(req.query['name'].slice(1))
+    )
+  }
+
+  if (req.query['since']) {
+    const sinceTime = new Date(req.query['since']).getTime()
+    collectedAlerts = collectedAlerts.filter(
+      alert => new Date(alert.activation_time).getTime() >= sinceTime
+    )
+  }
+
+  if (req.query['until']) {
+    const untilTime = new Date(req.query['until']).getTime()
+    collectedAlerts = collectedAlerts.filter(
+      alert => new Date(alert.activation_time).getTime() <= untilTime
+    )
+  }
+
+  res.send({ activations: collectedAlerts, paginatedAlerts, pagination })
 }
 
 function patchRun(req, res) {
@@ -1316,6 +1360,21 @@ function getArtifacts(req, res) {
     })
   }
 
+  if (req.query['partition-by']) {
+    collectedArtifacts = getPartitionedData(
+      collectedArtifacts,
+      'spec.db_key',
+      'metadata.updated',
+      'db_key'
+    )
+  }
+
+  collectedArtifacts = collectedArtifacts.sort((prevArtifact, nextArtifact) => {
+    const datePrevArtifact = new Date(prevArtifact.metadata.updated)
+    const dateNextArtifact = new Date(nextArtifact.metadata.updated)
+    return dateNextArtifact - datePrevArtifact 
+  })
+
   const [paginatedArtifacts, pagination] = getPaginationConfig(collectedArtifacts, req.query)
 
   res.send({ artifacts: paginatedArtifacts, pagination })
@@ -1567,7 +1626,7 @@ function getFuncs(req, res) {
       if (req.query['name'].includes('~')) {
         return func.metadata.name.includes(req.query['name'].slice(1))
       } else {
-        return func.metadata.name === func.query['name']
+        return func.metadata.name === req.query['name']
       }
     })
   }
@@ -2259,6 +2318,21 @@ function getModelEndpoints(req, res) {
         features: null
       }
     }))
+
+  if (req.query['name'] && req.query['function_name']) {
+    collectedEndpoints = collectedEndpoints.filter(
+      endpoint =>
+        endpoint.metadata.name === req.query['name'] &&
+        endpoint.spec.function_name === req.query['function_name']
+    )
+  }
+
+  if (req.query['latest_only']) {
+    collectedEndpoints = collectedEndpoints.filter(
+      endpoint => endpoint.spec.function_tag === 'latest'
+    )
+  }
+
   if (req.query['label']) {
     collectedEndpoints = collectedEndpoints.filter(endpoint =>
       filterByLabels(endpoint.metadata.labels, req.query['label'])
@@ -2266,14 +2340,6 @@ function getModelEndpoints(req, res) {
   }
 
   res.send({ endpoints: collectedEndpoints })
-}
-
-function getModelEndpoint(req, res) {
-  const endpoint = modelEndpoints.endpoints.find(
-    item => item.metadata.project === req.params.project && item.metadata.uid === req.params.uid
-  )
-
-  res.send(endpoint)
 }
 
 function getMetrics(req, res) {
@@ -2706,7 +2772,6 @@ app.get(`${mlrunAPIIngress}/log/:project/:uid`, getLog)
 app.get(`${mlrunAPIIngress}/projects/:project/runtime-resources`, getRuntimeResources)
 
 app.get(`${mlrunAPIIngress}/projects/:project/model-endpoints`, getModelEndpoints)
-app.get(`${mlrunAPIIngress}/projects/:project/model-endpoints/:uid`, getModelEndpoint)
 app.get(`${mlrunAPIIngress}/projects/:project/model-endpoints/:uid/metrics`, getMetrics)
 app.get(
   `${mlrunAPIIngress}/projects/:project/model-endpoints/:uid/metrics-values`,

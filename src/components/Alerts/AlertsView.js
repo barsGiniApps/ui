@@ -20,31 +20,33 @@ such restriction.
 import PropTypes from 'prop-types'
 
 import ActionBar from '../ActionBar/ActionBar'
+import AlertsFilters from './AlertsFilters'
 import AlertsTableRow from '../../elements/AlertsTableRow/AlertsTableRow'
 import Breadcrumbs from '../../common/Breadcrumbs/Breadcrumbs'
 import Loader from '../../common/Loader/Loader'
 import NoData from '../../common/NoData/NoData'
-import AlertsFilters from './AlertsFilters'
+import Pagination from '../../common/Pagination/Pagination'
 import Table from '../Table/Table'
 
-import { getNoDataMessage } from '../../utils/getNoDataMessage'
 import { ALERTS_FILTERS, ALERTS_PAGE } from '../../constants'
-import { VIRTUALIZATION_CONFIG } from '../../types'
-import { isRowRendered } from '../../hooks/useVirtualization.hook'
+import { getNoDataMessage } from '../../utils/getNoDataMessage'
+import { getCloseDetailsAlertLink } from '../../utils/link-helper.util'
 
 const AlertsView = ({
-  actionsMenu,
   alertsFiltersConfig,
   alertsStore,
   filters,
   filtersStore,
+  handleCancel,
+  handleRefreshAlerts,
+  handleRefreshWithFilters,
+  isCrossProjects,
   pageData,
-  refreshAlertsCallback,
+  paginationConfigAlertsRef,
   requestErrorMessage,
   selectedAlert,
   setSearchParams,
-  tableContent,
-  virtualizationConfig
+  tableContent
 }) => {
   return (
     <>
@@ -60,13 +62,13 @@ const AlertsView = ({
                 filterMenuName={ALERTS_FILTERS}
                 filtersConfig={alertsFiltersConfig}
                 filters={filters}
-                handleRefresh={refreshAlertsCallback}
+                handleRefresh={handleRefreshAlerts}
                 page={ALERTS_PAGE}
                 setSearchParams={setSearchParams}
                 withRefreshButton
                 withoutExpandButton
               >
-                <AlertsFilters />
+                <AlertsFilters isCrossProjects={isCrossProjects} />
               </ActionBar>
             </div>
             {alertsStore.loading ? (
@@ -83,30 +85,36 @@ const AlertsView = ({
                 )}
               />
             ) : (
-              <Table
-                actionsMenu={actionsMenu}
-                pageData={pageData}
-                retryRequest={refreshAlertsCallback}
-                selectedItem={selectedAlert}
-                tableClassName="alerts-table"
-                hideActionsMenu
-                tableHeaders={tableContent[0]?.content ?? []}
-              >
-                {tableContent.map(
-                  (tableItem, index) =>
-                    isRowRendered(virtualizationConfig, index) && (
-                      <AlertsTableRow
-                        key={index}
-                        hideActionsMenu
-                        handleSelectItem={() => {}}
-                        rowIndex={index}
-                        rowItem={tableItem}
-                        actionsMenu={[]}
-                        selectedItem={selectedAlert}
-                      />
-                    )
-                )}
-              </Table>
+              <>
+                <Table
+                  actionsMenu={[]}
+                  getCloseDetailsLink={() => getCloseDetailsAlertLink()} //TODO: the getCloseDetailsLink will be updated with ML-8368
+                  pageData={pageData}
+                  retryRequest={handleRefreshWithFilters}
+                  selectedItem={selectedAlert}
+                  tableClassName="alerts-table"
+                  handleCancel={handleCancel}
+                  hideActionsMenu
+                  tableHeaders={tableContent[0]?.content ?? []}
+                  withActionMenu={false}
+                >
+                  {tableContent.map((tableItem, index) => (
+                    <AlertsTableRow
+                      key={index}
+                      hideActionsMenu
+                      handleSelectItem={() => {}}
+                      rowIndex={index}
+                      rowItem={tableItem}
+                      actionsMenu={[]}
+                      selectedItem={selectedAlert}
+                    />
+                  ))}
+                </Table>
+                <Pagination
+                  page={pageData.page}
+                  paginationConfig={paginationConfigAlertsRef.current}
+                />
+              </>
             )}
           </div>
         </div>
@@ -117,12 +125,18 @@ const AlertsView = ({
 
 AlertsView.propTypes = {
   alertsFiltersConfig: PropTypes.object.isRequired,
+  alertsStore: PropTypes.object.isRequired,
   filters: PropTypes.object.isRequired,
   filtersStore: PropTypes.object.isRequired,
-  refreshAlertsCallback: PropTypes.func.isRequired,
+  handleCancel: PropTypes.func.isRequired,
+  handleRefreshAlerts: PropTypes.func.isRequired,
+  handleRefreshWithFilters: PropTypes.func.isRequired,
+  isCrossProjects: PropTypes.bool.isRequired,
+  pageData: PropTypes.object.isRequired,
+  paginationConfigAlertsRef: PropTypes.object.isRequired,
   requestErrorMessage: PropTypes.string.isRequired,
+  selectedAlert: PropTypes.object.isRequired,
   setSearchParams: PropTypes.func.isRequired,
-  tableContent: PropTypes.arrayOf(PropTypes.object).isRequired,
-  virtualizationConfig: VIRTUALIZATION_CONFIG.isRequired
+  tableContent: PropTypes.arrayOf(PropTypes.object).isRequired
 }
 export default AlertsView

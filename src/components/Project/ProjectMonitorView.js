@@ -21,6 +21,7 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { isEmpty } from 'lodash'
 
+import AlertsCounters from '../../elements/ProjectsMonitoringCounters/AlertsCounters'
 import Breadcrumbs from '../../common/Breadcrumbs/Breadcrumbs'
 import FeatureSetsPanel from '../FeatureSetsPanel/FeatureSetsPanel'
 import FunctionsPanel from '../FunctionsPanel/FunctionsPanel'
@@ -126,48 +127,60 @@ const ProjectMonitorView = ({
               </div>
             </div>
             <div className="main-info__statistics-section">
-              <ProjectSummaryCard
-                counterValue={projectSummary.data.models_count ?? 0}
-                link={`/projects/${params.projectName}/models`}
-                projectSummary={projectSummary}
-                tip={generateTipMessageForCounter('model', 'Models')}
-                title="Models"
-              />
-              <ProjectSummaryCard
-                counterValue={projectSummary.data.feature_sets_count ?? 0}
-                link={`/projects/${params.projectName}/feature-store`}
-                projectSummary={projectSummary}
-                tip={generateTipMessageForCounter('feature set', 'Feature store')}
-                title="Feature sets"
-              />
-              <ProjectSummaryCard
-                counterValue={projectSummary.data.files_count ?? 0}
-                link={`/projects/${params.projectName}/files`}
-                projectSummary={projectSummary}
-                tip={generateTipMessageForCounter('artifact', 'Artifacts')}
-                title="Artifacts"
-              />
-              {nuclioStreamsAreEnabled && (
+              <div className="main-info__statistics-section_left">
                 <ProjectSummaryCard
-                  counterValue={
-                    isNuclioModeDisabled ? 'N/A' : (Object.keys(v3ioStreams.data).length ?? 0)
-                  }
-                  link={`/projects/${params.projectName}/monitor${
-                    !isNuclioModeDisabled ? '/consumer-groups' : ''
-                  }`}
-                  projectSummary={v3ioStreams}
-                  title="Consumer groups"
-                  tooltipText={
-                    isNuclioModeDisabled
-                      ? 'Consumer group feature works when Nuclio is deployed'
-                      : ''
-                  }
+                  counterValue={projectSummary.data.models_count ?? 0}
+                  link={`/projects/${params.projectName}/models`}
+                  projectSummary={projectSummary}
+                  tip={generateTipMessageForCounter('model', 'Models')}
+                  title="Models"
                 />
-              )}
+
+                <ProjectSummaryCard
+                  counterValue={projectSummary.data.feature_sets_count ?? 0}
+                  link={`/projects/${params.projectName}/feature-store`}
+                  projectSummary={projectSummary}
+                  tip={generateTipMessageForCounter('feature set', 'Feature store')}
+                  title="Feature sets"
+                />
+
+                <ProjectSummaryCard
+                  counterValue={projectSummary.data.files_count ?? 0}
+                  link={`/projects/${params.projectName}/files`}
+                  projectSummary={projectSummary}
+                  tip={generateTipMessageForCounter('artifact', 'Artifacts')}
+                  title="Artifacts"
+                />
+              </div>
+              <div className="main-info__statistics-section_right">
+                {nuclioStreamsAreEnabled && (
+                  <ProjectSummaryCard
+                    counterValue={
+                      isNuclioModeDisabled ? 'N/A' : (Object.keys(v3ioStreams.data).length ?? 0)
+                    }
+                    link={`/projects/${params.projectName}/monitor${
+                      !isNuclioModeDisabled ? '/consumer-groups' : ''
+                    }`}
+                    projectSummary={v3ioStreams}
+                    title="Consumer groups"
+                    tooltipText={
+                      isNuclioModeDisabled
+                        ? 'Consumer group feature works when Nuclio is deployed'
+                        : ''
+                    }
+                  />
+                )}
+
+                <AlertsCounters />
+              </div>
             </div>
             <div className="main-info__statistics-section">
-              <ProjectJobs />
-              <ProjectFunctions />
+              <div>
+                <ProjectJobs />
+              </div>
+              <div>
+                <ProjectFunctions />
+              </div>
             </div>
           </div>
         </div>

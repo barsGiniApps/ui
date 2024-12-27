@@ -111,8 +111,8 @@ const generateRequestParams = (filters, jobName) => {
   return params
 }
 
-export const abortJob = createAsyncThunk('abortJob', ({ project, job }) => {
-  return jobsApi.abortJob(project, job.uid, job.iteration).then(response => {
+export const abortJob = createAsyncThunk('abortJob', ({ projectName, job }) => {
+  return jobsApi.abortJob(projectName, job.uid, job.iteration).then(response => {
     return get(response, 'data', {})
   })
 })
@@ -268,8 +268,8 @@ export const handleRunScheduledJob = createAsyncThunk(
 )
 export const removeScheduledJob = createAsyncThunk(
   'removeScheduledJob',
-  ({ project, scheduleName }) => {
-    return jobsApi.removeScheduledJob(project, scheduleName)
+  ({ projectName, scheduleName }) => {
+    return jobsApi.removeScheduledJob({ projectName, scheduleName })
   }
 )
 export const runNewJob = createAsyncThunk('runNewJob', ({ postData }) => {

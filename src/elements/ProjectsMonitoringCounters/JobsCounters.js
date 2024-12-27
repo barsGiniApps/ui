@@ -49,47 +49,47 @@ const JobsCounters = () => {
   return (
     <StatsCard className="monitoring-stats">
       <StatsCard.Header title="Jobs">
-        <div className="project-card__info">
-          <ClockIcon className="project-card__info-icon" />
-          <span>Past 24 hours</span>
-        </div>
-      </StatsCard.Header>
-      <StatsCard.Row>
         <StatsCard.Col>
-          <div className="stats__placeholder-subtitle" />
-          <span className="stats__counter">
-            {projectStore.projectsSummary.loading ? (
-              <Loader section small secondary />
-            ) : (
-              <span
-                className="stats__link"
-                onClick={jobStats.all.link}
-                data-testid="jobs_total_counter"
-              >
-                {jobStats.all.counter}
-              </span>
-            )}
-          </span>
-          <ul className="projects-monitoring-legend__status">
-            {jobStats.counters.map(({ counter, link, statusClass, tooltip }) => (
-              <li className="link" onClick={link} key={`${statusClass}-jobs`}>
+          <div className="project-card__info">
+            <div
+              className="stats__link"
+              data-testid="scheduled_total_counter"
+              onClick={jobStats.total.link}
+            >
+              <span className="stats__subtitle">Total</span>
+              <div className="stats__counter">
                 {projectStore.projectsSummary.loading ? (
                   <Loader section small secondary />
                 ) : (
-                  <Tooltip textShow template={<TextTooltipTemplate text={tooltip} />}>
-                    <span data-testid={`jobs_${statusClass}_counter`}>
-                      {counter}
-                      <i className={`state-${statusClass}`} />
-                    </span>
-                  </Tooltip>
+                  jobStats.total.counter
                 )}
-              </li>
-            ))}
-          </ul>
+              </div>
+            </div>
+            <ClockIcon className="project-card__info-icon" />
+            <span>Past 24 hours</span>
+          </div>
         </StatsCard.Col>
-      </StatsCard.Row>
+      </StatsCard.Header>
       <StatsCard.Row>
-        <StatsCard.Col />
+        {jobStats.counters.map(({ counter, label, link, statusClass, tooltip }) => (
+          <StatsCard.Col key={`${statusClass}-jobs`}>
+            <div className="stats__link" onClick={link} data-testid={`jobs_${statusClass}_counter`}>
+              <div className="stats__counter">
+                {projectStore.projectsSummary.loading ? (
+                  <Loader section small secondary />
+                ) : (
+                  counter
+                )}
+              </div>
+              <div data-testid={`jobs_${statusClass}_status`} className="stats__status">
+                <Tooltip textShow template={<TextTooltipTemplate text={tooltip} />}>
+                  <h6 className="stats__subtitle">{label}</h6>
+                  <i className={`state-${statusClass}`} />
+                </Tooltip>
+              </div>
+            </div>
+          </StatsCard.Col>
+        ))}
       </StatsCard.Row>
     </StatsCard>
   )

@@ -19,7 +19,7 @@ such restriction.
 */
 import React, { useCallback, useRef, useEffect, useState, useMemo } from 'react'
 import PropTypes from 'prop-types'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { isEmpty } from 'lodash'
 import { useSelector } from 'react-redux'
 import classNames from 'classnames'
@@ -50,6 +50,7 @@ import { ReactComponent as Back } from 'igz-controls/images/back-arrow.svg'
 import { ReactComponent as Refresh } from 'igz-controls/images/refresh.svg'
 import { ReactComponent as EnlargeIcon } from 'igz-controls/images/ml-enlarge.svg'
 import { ReactComponent as MinimizeIcon } from 'igz-controls/images/ml-minimize.svg'
+import { ReactComponent as HistoryIcon } from 'igz-controls/images/history.svg'
 
 const DetailsHeader = ({
   actionsMenu,
@@ -65,15 +66,17 @@ const DetailsHeader = ({
   pageData,
   selectedItem,
   setIteration,
-  tab
+  tab,
+  withActionMenu = true
 }) => {
   const [headerIsMultiline, setHeaderIsMultiline] = useState(false)
   const detailsStore = useSelector(store => store.detailsStore)
   const params = useParams()
   const navigate = useNavigate()
   const viewMode = getViewMode(window.location.search)
-  const { actionButton, withToggleViewBtn } = pageData.details
+  const { actionButton, withToggleViewBtn, showAllVersions } = pageData.details
   const headerRef = useRef()
+  const location = useLocation()
 
   const errorMessage = useMemo(
     () =>
@@ -141,7 +144,8 @@ const DetailsHeader = ({
                 getCloseDetailsLink
                   ? getCloseDetailsLink(selectedItem.name)
                   : generateUrlFromRouterPath(
-                      window.location.pathname.split('/').slice(0, -2).join('/')
+                      window.location.pathname.split('/').slice(0, -2).join('/') +
+                        window.location.search
                     )
               }
               onClick={handleBackClick}
@@ -263,6 +267,15 @@ const DetailsHeader = ({
             variant={actionButton.variant}
           />
         )}
+        {showAllVersions && (
+          <RoundedIcon
+            id="showAllVersions"
+            onClick={() => showAllVersions()}
+            tooltipText="Show all versions"
+          >
+            <HistoryIcon />
+          </RoundedIcon>
+        )}
         {isDetailsScreen && (
           <RoundedIcon
             id="refresh"
@@ -272,7 +285,7 @@ const DetailsHeader = ({
             <Refresh />
           </RoundedIcon>
         )}
-        <ActionsMenu dataItem={selectedItem} menu={actionsMenu} time={500} />
+        {withActionMenu && <ActionsMenu dataItem={selectedItem} menu={actionsMenu} time={500} />}
         <div className="item-header__navigation-buttons">
           {withToggleViewBtn && !isDetailsPopUp && (
             <>
@@ -280,7 +293,7 @@ const DetailsHeader = ({
                 <RoundedIcon
                   onClick={() => {
                     navigate(
-                      `${window.location.pathname}${window.location.search}${window.location.search ? '&' : '?'}${VIEW_SEARCH_PARAMETER}=full`
+                      `${location.pathname}${window.location.search}${window.location.search ? '&' : '?'}${VIEW_SEARCH_PARAMETER}=full`
                     )
                   }}
                   id="full-view"
@@ -293,7 +306,7 @@ const DetailsHeader = ({
                 <RoundedIcon
                   onClick={() => {
                     navigate(
-                      `${window.location.pathname}${getFilteredSearchParams(window.location.search, [VIEW_SEARCH_PARAMETER])}`
+                      `${location.pathname}${getFilteredSearchParams(window.location.search, [VIEW_SEARCH_PARAMETER])}`
                     )
                   }}
                   id="table-view"

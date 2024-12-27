@@ -20,8 +20,8 @@ such restriction.
 import React, { useCallback, useMemo, useRef } from 'react'
 import PropTypes from 'prop-types'
 import classnames from 'classnames'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { isEmpty, max, min } from 'lodash'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { max, min } from 'lodash'
 
 import { RoundedIcon } from 'igz-controls/components'
 
@@ -36,7 +36,7 @@ import {
   ITEMS_COUNT_START
 } from '../../constants'
 import { PAGINATION_CONFIG } from '../../types'
-import { getDefaultCloseDetailsLink } from '../../utils/link-helper.util'
+import { getCloseDetailsLink } from '../../utils/link-helper.util'
 
 import { ReactComponent as DoubleArrow } from 'igz-controls/images/pagination-double-arrow.svg'
 import { ReactComponent as Arrow } from 'igz-controls/images/pagination-arrow.svg'
@@ -45,10 +45,14 @@ import './pagination.scss'
 
 const threeDotsString = '...'
 
-const Pagination = ({ page, paginationConfig, selectedItem = {} }) => {
+const Pagination = ({
+  closeParamName = '',
+  disableNextDoubleBtn = false,
+  disabledNextDoubleBtnTooltip = '',
+  paginationConfig
+}) => {
   const [, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
-  const params = useParams()
   const paginationPagesRef = useRef()
   const leftSideRef = useRef(0)
   const rightSideRef = useRef(0)
@@ -64,11 +68,12 @@ const Pagination = ({ page, paginationConfig, selectedItem = {} }) => {
       prevBtn: paginationConfig[FE_PAGE] === 1,
       prevDoubleBtn: paginationConfig[BE_PAGE] === 1,
       nextBtn:
-        paginationConfig[FE_PAGE] === paginationConfig[FE_PAGE_END] &&
-        !paginationConfig.paginationResponse?.['page-token'],
-      nextDoubleBtn: !paginationConfig.paginationResponse?.['page-token']
+        (paginationConfig[FE_PAGE] === paginationConfig[FE_PAGE_END] && disableNextDoubleBtn) ||
+        (paginationConfig[FE_PAGE] === paginationConfig[FE_PAGE_END] &&
+          !paginationConfig.paginationResponse?.['page-token']),
+      nextDoubleBtn: disableNextDoubleBtn || !paginationConfig.paginationResponse?.['page-token']
     }
-  }, [paginationConfig])
+  }, [disableNextDoubleBtn, paginationConfig])
 
   const prevDoubleBtnTooltip = useMemo(() => {
     const visiblePagesCount = paginationConfig[BE_PAGE_SIZE] / paginationConfig[FE_PAGE_SIZE]
@@ -78,10 +83,10 @@ const Pagination = ({ page, paginationConfig, selectedItem = {} }) => {
   }, [paginationConfig])
 
   const handlePageChange = useCallback(() => {
-    if (!isEmpty(selectedItem)) {
-      navigate(getDefaultCloseDetailsLink(params, page), { replace: true })
+    if (closeParamName) {
+      navigate(getCloseDetailsLink(closeParamName, true), { replace: true })
     }
-  }, [navigate, page, params, selectedItem])
+  }, [navigate, closeParamName])
 
   const paginationItems = useMemo(() => {
     if (!paginationConfig[FE_PAGE]) return []
@@ -290,9 +295,11 @@ const Pagination = ({ page, paginationConfig, selectedItem = {} }) => {
               className="pagination-navigate-btn"
               onClick={() => goToNextBePage()}
               tooltipText={
-                !navigationDisableState.nextDoubleBtn
-                  ? `Load page ${paginationConfig[FE_PAGE_END] + 1}+`
-                  : ''
+                navigationDisableState.nextDoubleBtn && disabledNextDoubleBtnTooltip
+                  ? disabledNextDoubleBtnTooltip
+                  : !navigationDisableState.nextDoubleBtn
+                    ? `Load page ${paginationConfig[FE_PAGE_END] + 1}+`
+                    : ''
               }
               disabled={navigationDisableState.nextDoubleBtn}
             >
@@ -307,9 +314,10 @@ const Pagination = ({ page, paginationConfig, selectedItem = {} }) => {
 }
 
 Pagination.propTypes = {
-  page: PropTypes.string.isRequired,
-  paginationConfig: PAGINATION_CONFIG.isRequired,
-  selectedItem: PropTypes.shape({})
+  closeParamName: PropTypes.string,
+  disableNextDoubleBtn: PropTypes.bool,
+  disabledNextDoubleBtnTooltip: PropTypes.string,
+  paginationConfig: PAGINATION_CONFIG.isRequired
 }
 
 export default Pagination

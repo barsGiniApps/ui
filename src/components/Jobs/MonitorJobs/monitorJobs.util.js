@@ -18,7 +18,6 @@ under the Apache 2.0 license is conditioned upon your compliance with
 such restriction.
 */
 import React from 'react'
-import { isEmpty, debounce } from 'lodash'
 
 import { FUNCTION_RUN_KINDS } from '../../../constants'
 import {
@@ -45,7 +44,8 @@ export const generateActionsMenu = (
   toggleConvertedYaml,
   selectedJob,
   handleConfirmDeleteJob,
-  isDetailsPopUp = false
+  isDetailsPopUp = false,
+  jobName
 ) => {
   if (job?.uid) {
     const jobKindIsAbortable = isJobKindAbortable(job, abortable_function_kinds)
@@ -63,7 +63,7 @@ export const generateActionsMenu = (
           onClick: handleRerunJob
         },
         {
-          label: 'Monitoring',
+          label: "Run's resource monitoring",
           icon: <MonitorIcon />,
           tooltip: !jobs_dashboard_url
             ? 'Grafana service unavailable'
@@ -71,8 +71,7 @@ export const generateActionsMenu = (
               ? 'Unavailable for Dask jobs'
               : '',
           disabled: !jobs_dashboard_url || jobKindIsDask,
-          onClick: handleMonitoring,
-          hidden: !isEmpty(selectedJob)
+          onClick: handleMonitoring
         },
         {
           label: 'Abort',
@@ -92,11 +91,18 @@ export const generateActionsMenu = (
           onClick: toggleConvertedYaml
         },
         {
-          label: 'Delete',
+          label: 'Delete run',
           icon: <Delete />,
           className: 'danger',
-          onClick: handleConfirmDeleteJob,
+          onClick: (job) => handleConfirmDeleteJob(job),
           hidden: JOB_RUNNING_STATES.includes(job?.state?.value) || isDetailsPopUp
+        },
+        {
+          label: 'Delete all runs',
+          icon: <Delete />,
+          className: 'danger',
+          onClick: (job) => handleConfirmDeleteJob(job, true),
+          hidden: JOB_RUNNING_STATES.includes(job?.state?.value) || jobName || isDetailsPopUp
         }
       ]
     ]
@@ -112,12 +118,3 @@ export const generateActionsMenu = (
     ]
   }
 }
-
-export const fetchInitialJobs = debounce(
-  (filters, selectedJob, jobId, refreshJobs, jobsAreInitializedRef) => {
-    if (isEmpty(selectedJob) && !jobId && !jobsAreInitializedRef.current) {
-      refreshJobs(filters)
-      jobsAreInitializedRef.current = true
-    }
-  }
-)

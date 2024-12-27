@@ -22,6 +22,7 @@ import PropTypes from 'prop-types'
 import { useSelector } from 'react-redux'
 import { useParams } from 'react-router-dom'
 
+import DetailsDrillDownAlert from '../../DetailsDrillDownAlert/DetailsDrillDownAlert'
 import DetailsAlerts from '../../DetailsAlerts/DetailsAlerts'
 import DetailsAnalysis from '../../DetailsAnalysis/DetailsAnalysis'
 import DetailsArtifacts from '../../DetailsArtifacts/DetailsArtifacts'
@@ -40,15 +41,18 @@ import DetailsResults from '../../DetailsResults/DetailsResults'
 import DetailsStatistics from '../../DetailsStatistics/DetailsStatistics'
 import DetailsTransformations from '../../DetailsTransformations/DetailsTransformations'
 import NoData from '../../../common/NoData/NoData'
+import DetailsCollections from '../../DetailsCollections/DetailsCollections'
 
 import { isJobKindDask, JOB_STEADY_STATES } from '../../Jobs/jobs.util'
 
 import {
+  DETAILS_ALERT_APPLICATION,
   DETAILS_ALERTS_TAB,
   DETAILS_ANALYSIS_TAB,
   DETAILS_ARTIFACTS_TAB,
   DETAILS_BUILD_LOG_TAB,
   DETAILS_CODE_TAB,
+  DETAILS_COLLECTIONS_TAB,
   DETAILS_DRIFT_ANALYSIS_TAB,
   DETAILS_FEATURES_ANALYSIS_TAB,
   DETAILS_FEATURES_TAB,
@@ -124,12 +128,7 @@ const DetailsTabsContent = ({
     case DETAILS_PREVIEW_TAB:
       return <DetailsPreview artifact={selectedItem} handlePreview={handlePreview} />
     case DETAILS_INPUTS_TAB:
-      return (
-        <DetailsInputs
-          inputs={selectedItem.inputs}
-          isDetailsPopUp={isDetailsPopUp}
-        />
-      )
+      return <DetailsInputs inputs={selectedItem.inputs} isDetailsPopUp={isDetailsPopUp} />
     case DETAILS_ARTIFACTS_TAB:
       return (
         <DetailsArtifacts
@@ -180,12 +179,12 @@ const DetailsTabsContent = ({
     case DETAILS_METADATA_TAB:
     case DETAILS_FEATURES_TAB:
     case DETAILS_RETURNED_FEATURES_TAB:
-      return (detailsStore.modelFeatureVectorData.features ??
+      return detailsStore.modelFeatureVectorData.features ??
         (selectedItem.schema ||
           selectedItem.entities ||
           selectedItem.features ||
           selectedItem.inputs ||
-          selectedItem.outputs)) ? (
+          selectedItem.outputs) ? (
         <DetailsMetadata
           selectedItem={
             selectedItem.schema ||
@@ -235,6 +234,20 @@ const DetailsTabsContent = ({
           setChangesCounter={setChangesCounter}
         />
       )
+    case DETAILS_ALERT_APPLICATION:
+      return (
+        <DetailsDrillDownAlert
+          detailsStore={detailsStore}
+          isDetailsPopUp={isDetailsPopUp}
+          pageData={pageData}
+          ref={applyChangesRef}
+          selectedItem={selectedItem}
+          setChangesCounter={setChangesCounter}
+          setChangesData={setChangesData}
+        />
+      )
+    case DETAILS_COLLECTIONS_TAB:
+      return <DetailsCollections selectedItem={selectedItem} />
     default:
       return null
   }

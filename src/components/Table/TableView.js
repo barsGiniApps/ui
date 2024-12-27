@@ -52,8 +52,8 @@ const TableView = ({
   tableHeaders,
   tablePanelRef,
   tableRef,
-  toggleConvertedYaml,
-  virtualizationConfig
+  virtualizationConfig,
+  withActionMenu
 }) => {
   const tableClass = classnames(
     'table',
@@ -110,6 +110,7 @@ const TableView = ({
             retryRequest={retryRequest}
             selectedItem={selectedItem}
             tab={tab}
+            withActionMenu={withActionMenu}
           />
         )}
       </div>
@@ -135,7 +136,8 @@ TableView.propTypes = {
   tableHeadRef: PropTypes.shape({}),
   tableHeaders: PropTypes.array,
   tablePanelRef: PropTypes.shape({}),
-  virtualizationConfig: VIRTUALIZATION_CONFIG.isRequired
+  virtualizationConfig: VIRTUALIZATION_CONFIG.isRequired,
+  withActionMenu: PropTypes.bool
 }
 
 export default TableView

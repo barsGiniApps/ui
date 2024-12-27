@@ -253,20 +253,18 @@ const ModelEndpoints = () => {
         <div className="table-container">
           <div className="content__action-bar-wrapper">
             <ModelsPageTabs />
-            <div className="action-bar">
-              <ActionBar
-                filters={filters}
-                filtersConfig={filtersConfig}
-                handleRefresh={handleRefresh}
-                navigateLink={`/projects/${params.projectName}/models/${MODEL_ENDPOINTS_TAB}${window.location.search}`}
-                page={MODELS_PAGE}
-                setSearchParams={setSearchParams}
-                tab={MODEL_ENDPOINTS_TAB}
-                withoutExpandButton
-              >
-                <ModelEndpointsFilters />
-              </ActionBar>
-            </div>
+            <ActionBar
+              filters={filters}
+              filtersConfig={filtersConfig}
+              handleRefresh={handleRefresh}
+              navigateLink={`/projects/${params.projectName}/models/${MODEL_ENDPOINTS_TAB}${window.location.search}`}
+              page={MODELS_PAGE}
+              setSearchParams={setSearchParams}
+              tab={MODEL_ENDPOINTS_TAB}
+              withoutExpandButton
+            >
+              <ModelEndpointsFilters />
+            </ActionBar>
           </div>
           {artifactsStore.modelEndpoints.loading ? null : modelEndpoints.length === 0 ? (
             <NoData
@@ -297,7 +295,7 @@ const ModelEndpoints = () => {
                     isRowRendered(virtualizationConfig, index) && (
                       <ArtifactsTableRow
                         actionsMenu={actionsMenu}
-                        key={tableItem.data.ui.identifier}
+                        key={tableItem.data.ui.identifierUnique}
                         rowIndex={index}
                         rowItem={tableItem}
                         selectedItem={selectedModelEndpoint}

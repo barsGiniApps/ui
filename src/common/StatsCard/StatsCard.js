@@ -19,6 +19,9 @@ such restriction.
 */
 import React from 'react'
 import PropTypes from 'prop-types'
+import classNames from 'classnames'
+
+import { Tip } from 'igz-controls/components'
 
 import './statsCard.scss'
 
@@ -30,10 +33,19 @@ const StatsCard = ({ children, className = '', onClick = () => {} }) => {
   )
 }
 
-StatsCard.Header = ({ children = null, title = '' }) => {
+StatsCard.Header = ({ children = null, icon = '', iconClass = '', title = '', tip = '' }) => {
+  const titleClass = classNames(
+    'stats-card__title data-ellipsis',
+    icon && 'stats-card__title_with-icon'
+  )
+
   return (
     <div className="stats-card__row">
-      {title && <h5 className="stats-card__title">{title}</h5>}
+      <div className={titleClass}>
+        {icon && <i className={iconClass}>{icon}</i>}
+        {title && <span>{title}</span>}
+        {tip && <Tip className="stats-card__title-tip" text={tip} />}
+      </div>
       {children}
     </div>
   )

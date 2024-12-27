@@ -20,7 +20,7 @@ such restriction.
 import React, { useEffect, useState, useMemo, useLayoutEffect, useCallback } from 'react'
 import { useSelector } from 'react-redux'
 import { useNavigate, useParams, Outlet, useLocation } from 'react-router-dom'
-import { defaultsDeep } from 'lodash'
+import { defaultsDeep, isEmpty } from 'lodash'
 
 import Breadcrumbs from '../../common/Breadcrumbs/Breadcrumbs'
 import ContentMenu from '../../elements/ContentMenu/ContentMenu'
@@ -64,6 +64,8 @@ export const JobsContext = React.createContext({})
 const Jobs = () => {
   const [confirmData, setConfirmData] = useState(null)
   const [selectedTab, setSelectedTab] = useState(null)
+  const [autoRefreshPrevValue, setAutoRefreshPrevValue] = useState(false)
+  const [selectedJob, setSelectedJob] = useState({})
   const params = useParams()
   const navigate = useNavigate()
   const location = useLocation()
@@ -98,6 +100,7 @@ const Jobs = () => {
     abortJobRef,
     abortingJobs,
     editableItem,
+    fetchJobFunctionsPromiseRef,
     getWorkflows,
     handleMonitoring,
     handleRefreshJobs,
@@ -225,19 +228,22 @@ const Jobs = () => {
                       : '',
                     variant: TERTIARY_BUTTON,
                     disabled: !appStore.frontendSpec.jobs_dashboard_url,
-                    onClick: () => handleMonitoring()
+                    onClick: () => handleMonitoring(selectedJob, true)
                   }
                 ]}
-                autoRefreshIsEnabled={selectedTab === MONITOR_JOBS_TAB}
                 autoRefreshIsStopped={jobWizardIsOpened || jobsStore.loading}
+                autoRefreshStopTrigger={!isEmpty(selectedJob)}
                 filters={filters}
-                filtersConfig={tabData[selectedTab].filtersConfig}
+                filtersConfig={initialTabData[selectedTab].filtersConfig}
                 handleRefresh={tabData[selectedTab].handleRefresh}
-                hidden={Boolean(params.jobId || params.workflowId)}
+                handleAutoRefreshPrevValueChange={setAutoRefreshPrevValue}
+                hidden={Boolean(params.workflowId)}
                 key={selectedTab}
                 page={JOBS_MONITORING_PAGE}
                 setSearchParams={setSearchParams}
                 tab={selectedTab}
+                withAutoRefresh
+                withInternalAutoRefresh={params.jobName}
                 withRefreshButton
                 withoutExpandButton
               >
@@ -251,8 +257,11 @@ const Jobs = () => {
                   abortJobRef,
                   abortingJobs,
                   editableItem,
+                  fetchJobFunctionsPromiseRef,
                   getWorkflows,
+                  handleMonitoring,
                   handleRerunJob,
+                  autoRefreshPrevValue,
                   jobRuns,
                   jobWizardIsOpened,
                   jobWizardMode,
@@ -266,6 +275,7 @@ const Jobs = () => {
                   scheduledFiltersConfig: tabData[SCHEDULE_TAB].filtersConfig,
                   scheduledJobs,
                   searchParams,
+                  selectedJob,
                   setAbortingJobs,
                   setConfirmData,
                   setEditableItem,
@@ -274,6 +284,7 @@ const Jobs = () => {
                   setJobWizardMode,
                   setJobs,
                   setScheduledJobs,
+                  setSelectedJob,
                   tabData,
                   terminateAbortTasksPolling,
                   workflowsFiltersConfig: tabData[MONITOR_WORKFLOWS_TAB].filtersConfig

@@ -1,4 +1,13 @@
 @import '~igz-controls/scss/colors';
+@import '~igz-controls/scss/borders';
+
+@mixin counterLinkHover {
+  color: $topaz;
+  text-decoration: underline;
+  cursor: pointer;
+  text-underline-offset: 1px;
+  text-decoration-thickness: 2px;
+}
 
 .monitoring-stats {
   flex-direction: column;
@@ -7,66 +16,107 @@
   border: 1px solid $frenchLilac;
 
   &.alerts-card {
+    height: 100%;
     background-color: $carouselPink;
     border: 1px solid $babyPink;
   }
 
-  .stats-card__row {
-    flex: unset;
-
-    &:last-child {
-      margin-top: auto;
-    }
-  }
-
   .stats {
     &__subtitle {
-      margin: 0 0 5px 0;
+      display: inline-block;
+      margin: 0;
       color: $topaz;
       font-weight: normal;
-      font-size: 1rem;
+      font-size: 0.75rem;
     }
 
-    &__placeholder-subtitle{
-      height: 24px;
-    }
+    &-card__row {
+      flex: unset;
 
-    &__header-icon {
-      height: 20px;
-      width: 20px;
-      margin-right: 5px;
-
-      path {
-        fill: $ceriseRed;
+      &:last-child {
+        padding: 10px 0;
       }
     }
 
     &__counter {
-      display: flex;
-      flex: 1;
-      min-height: 58px;
-      margin: 0 0 5px 0;
       color: $primary;
-      font-weight: 700;
-      font-size: 38px;
-      align-items: center;
-      justify-content: center;
-    }
-
-    &__link {
-      color: $darkPurple;
-      cursor: pointer;
+      font-weight: 400;
+      font-size: 28px;
 
       &:hover {
-        text-decoration: underline;
-        color: $topaz;
-        text-underline-offset: 1px;
-        text-decoration-thickness: 2px;
+        @include counterLinkHover;
       }
     }
 
-    .link {
-      font-size: 1rem;
+    &__status {
+      i[class^='state-'] {
+        margin-left: 5px;
+      }
+    }
+
+    &__link {
+      cursor: pointer;
+
+      &:hover {
+        .stats__counter {
+          @include counterLinkHover;
+        }
+      }
+    }
+  }
+
+  .project-card__info {
+    display: flex;
+    align-items: baseline;
+    align-items: center;
+    justify-content: flex-end;
+    margin-left: 1rem;
+    color: $topaz;
+    font-size: 0.75rem;
+
+    & *:not(:last-child) {
+      margin-right: 5px;
+    }
+
+    .stats__link {
+      display: flex;
+      align-items: center;
+    }
+
+    &-icon {
+      flex: 0 1 12px;
+
+      & * {
+        fill: $spunPearl;
+      }
+    }
+
+    .stats__subtitle {
+      margin: 0 5px 0 0;
+      font-size: inherit;
+    }
+
+    .stats__counter {
+      position: relative;
+      margin-right: 0.6em;
+      padding-right: 0.75em;
+      font-size: 0.9vi;
+
+      &::after {
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        display: inline-block;
+        width: 1px;
+        margin: 3px 0;
+        background-color: $mulledWineThree;
+        content: '';
+      }
+    }
+
+    .project-card__info-icon {
+      position: relative;
     }
   }
 

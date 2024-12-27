@@ -97,20 +97,24 @@ const ArtifactPopUp = ({ artifactData, isOpen, onResolve }) => {
       })
     )
       .unwrap()
-      .then(artifacts => {
-        if (artifacts.length > 0) {
-          const selectedArtifact =
-            artifacts.length === 1
-              ? artifacts[0]
-              : artifacts.find(artifact => artifact.tag === 'latest' || maxBy(artifacts, 'updated'))
+      .then(response => {
+        if (response) {
+          if (response.artifacts?.length > 0) {
+            const selectedArtifact =
+              response.artifacts.length === 1
+                ? response.artifacts[0]
+                : response.artifacts.find(
+                    artifact => artifact.tag === 'latest' || maxBy(response.artifacts, 'updated')
+                  )
 
-          setSelectedArtifact(selectedArtifact)
+            setSelectedArtifact(selectedArtifact)
 
-          setIsLoading(false)
-        } else {
-          showArtifactErrorNotification(dispatch, {}, artifactContext.type)
+            setIsLoading(false)
+          } else {
+            showArtifactErrorNotification(dispatch, {}, artifactContext.type)
 
-          onResolve()
+            onResolve()
+          }
         }
       })
       .catch(error => {
@@ -130,7 +134,7 @@ const ArtifactPopUp = ({ artifactData, isOpen, onResolve }) => {
   ])
 
   const actionsMenu = useMemo(
-    () => (fileMin, menuPosition) =>
+    () => fileMin =>
       artifactContext.generateActionsMenu(
         fileMin,
         frontendSpec,
@@ -140,8 +144,9 @@ const ArtifactPopUp = ({ artifactData, isOpen, onResolve }) => {
         artifactData.project,
         fetchArtifact,
         {},
-        menuPosition,
         selectedArtifact,
+        () => {},
+        false,
         true
       ),
     [

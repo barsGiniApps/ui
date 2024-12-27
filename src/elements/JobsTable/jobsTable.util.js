@@ -21,14 +21,8 @@ import { isNil } from 'lodash'
 
 import { getInfoHeaders, getJobsDetailsMenu } from '../../components/Jobs/jobs.util'
 import { JOBS_PAGE } from '../../constants'
-import { TERTIARY_BUTTON } from 'igz-controls/constants'
 
-export const generatePageData = (
-  handleFetchJobLogs,
-  selectedJob,
-  jobsDashboardUrl,
-  handleMonitoring
-) => {
+export const generatePageData = (handleFetchJobLogs, selectedJob) => {
   return {
     page: JOBS_PAGE,
     details: {
@@ -37,14 +31,14 @@ export const generatePageData = (
       infoHeaders: getInfoHeaders(!isNil(selectedJob.ui_run), selectedJob),
       refreshLogs: handleFetchJobLogs,
       removeLogs: () => {},
-      withLogsRefreshBtn: true,
-      actionButton: {
-        label: 'Resource monitoring',
-        tooltip: !jobsDashboardUrl ? 'Grafana service unavailable' : '',
-        variant: TERTIARY_BUTTON,
-        disabled: !jobsDashboardUrl,
-        onClick: () => handleMonitoring(selectedJob)
-      }
+      withLogsRefreshBtn: true
     }
   }
+}
+
+export const getConfirmDeleteJobMessage = (job, isDeleteAll) => {
+  const runsCannotBeRestored = 'Deleted runs can not be restored.'
+  const deleteAll = `Are you sure you want to delete all runs of the job "${job.name}"?`
+  const deleteRun = `Are you sure you want to delete the run with the UID "${job.uid}" of the job "${job.name}"?`
+  return `${(isDeleteAll ? deleteAll : deleteRun)} ${runsCannotBeRestored}`
 }

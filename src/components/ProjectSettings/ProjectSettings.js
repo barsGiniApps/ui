@@ -26,6 +26,7 @@ import ProjectSettingsMembers from '../../elements/ProjectSettingsMembers/Projec
 import ProjectSettingsSecrets from '../../elements/ProjectSettingsSecrets/ProjectSettingsSecrets'
 import Breadcrumbs from '../../common/Breadcrumbs/Breadcrumbs'
 import ContentMenu from '../../elements/ContentMenu/ContentMenu'
+import Loader from '../../common/Loader/Loader'
 
 import { Button, ConfirmDialog } from 'igz-controls/components'
 import { DANGER_BUTTON, TERTIARY_BUTTON } from 'igz-controls/constants'
@@ -70,9 +71,14 @@ const ProjectSettings = () => {
     () => frontendSpec?.feature_flags?.project_membership === 'enabled',
     [frontendSpec]
   )
+
+  const userIsProjectOwner = useMemo(() => {
+    return membersState?.activeUser?.data?.id === membersState?.projectInfo?.owner.id
+  }, [membersState])
+
   const projectMembersTabIsShown = useMemo(
-    () => isProjectMembersTabShown(projectMembershipIsEnabled, membersState),
-    [membersState, projectMembershipIsEnabled]
+    () => isProjectMembersTabShown(projectMembershipIsEnabled, userIsProjectOwner, membersState),
+    [userIsProjectOwner, membersState, projectMembershipIsEnabled]
   )
 
   const fetchProjectIdAndOwner = useCallback(() => {
@@ -278,6 +284,8 @@ const ProjectSettings = () => {
         />
       )}
 
+      { projectStore.projectsToDelete.includes(params.projectName) && <Loader />}
+
       <div className="settings">
         <div className="settings__header">
           <Breadcrumbs />
@@ -308,7 +316,9 @@ const ProjectSettings = () => {
                     )
                   }}
                   className="delete-project-btn"
-                  disabled={projectStore.loading || projectStore.project.loading}
+                  disabled={
+                    !userIsProjectOwner || projectStore.loading || projectStore.project.loading
+                  }
                 />
               )}
             </div>

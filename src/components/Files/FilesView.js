@@ -21,24 +21,25 @@ import React from 'react'
 import PropTypes from 'prop-types'
 import { isEmpty } from 'lodash'
 
-import NoData from '../../common/NoData/NoData'
-import Table from '../Table/Table'
-import Breadcrumbs from '../../common/Breadcrumbs/Breadcrumbs'
-import Loader from '../../common/Loader/Loader'
-import PreviewModal from '../../elements/PreviewModal/PreviewModal'
-import ArtifactsTableRow from '../../elements/ArtifactsTableRow/ArtifactsTableRow'
-import Details from '../Details/Details'
-import WarningMessage from '../../common/WarningMessage/WarningMessage'
 import ActionBar from '../ActionBar/ActionBar'
-
-import { ACTIONS_MENU, VIRTUALIZATION_CONFIG } from '../../types'
-import { FILES_PAGE, FULL_VIEW_MODE } from '../../constants'
-import { SECONDARY_BUTTON } from 'igz-controls/constants'
-import { SORT_PROPS } from 'igz-controls/types'
-import { getNoDataMessage } from '../../utils/getNoDataMessage'
-import { isRowRendered } from '../../hooks/useVirtualization.hook'
-import { registerArtifactTitle, filtersConfig } from './files.util'
 import ArtifactsFilters from '../ArtifactsActionBar/ArtifactsFilters'
+import ArtifactsTableRow from '../../elements/ArtifactsTableRow/ArtifactsTableRow'
+import Breadcrumbs from '../../common/Breadcrumbs/Breadcrumbs'
+import Details from '../Details/Details'
+import HistoryBackLink from '../../common/HistoryBackLink/historyBackLink'
+import Loader from '../../common/Loader/Loader'
+import NoData from '../../common/NoData/NoData'
+import Pagination from '../../common/Pagination/Pagination'
+import PreviewModal from '../../elements/PreviewModal/PreviewModal'
+import Table from '../Table/Table'
+
+import { FILES_PAGE, FULL_VIEW_MODE, ALL_VERSIONS_PATH, FILES_TAB } from '../../constants'
+import { ACTIONS_MENU } from '../../types'
+import { SECONDARY_BUTTON } from 'igz-controls/constants'
+import { getCloseDetailsLink } from '../../utils/link-helper.util'
+import { getNoDataMessage } from '../../utils/getNoDataMessage'
+import { getSavedSearchParams } from '../../utils/filter.util'
+import { registerArtifactTitle } from './files.util'
 
 const FilesView = React.forwardRef(
   (
@@ -48,28 +49,26 @@ const FilesView = React.forwardRef(
       applyDetailsChangesCallback,
       artifactsStore,
       detailsFormInitialValues,
+      fileName,
       files,
       filters,
+      filtersConfig,
       filtersStore,
       getAndSetSelectedArtifact,
-      handleRefresh,
+      handleRefreshFiles,
       handleRefreshWithFilters,
       handleRegisterArtifact,
-      handleSelectFile,
-      maxArtifactsErrorIsShown,
+      isAllVersions,
       pageData,
+      paginationConfigFilesRef,
+      projectName,
       requestErrorMessage,
       selectedFile,
-      selectedRowData,
-      setMaxArtifactsErrorIsShown,
-      setSearchParams,
+      setSearchFilesParams,
       setSelectedFileMin,
-      sortProps,
       tableContent,
       tableHeaders,
-      toggleRow,
-      viewMode = null,
-      virtualizationConfig
+      viewMode = null
     },
     { filesRef }
   ) => {
@@ -83,6 +82,12 @@ const FilesView = React.forwardRef(
             {artifactsStore.loading && <Loader />}
             <div className="table-container">
               <div className="content__action-bar-wrapper">
+                {isAllVersions && (
+                  <HistoryBackLink
+                    itemName={fileName}
+                    link={`/projects/${projectName}/files${getSavedSearchParams(window.location.search)}`}
+                  />
+                )}
                 <ActionBar
                   actionButtons={[
                     {
@@ -94,16 +99,17 @@ const FilesView = React.forwardRef(
                   ]}
                   filters={filters}
                   filtersConfig={filtersConfig}
-                  handleRefresh={handleRefresh}
+                  navigateLink={`/projects/${projectName}/files${isAllVersions ? `/${fileName}/${ALL_VERSIONS_PATH}` : ''}${window.location.search}`}
+                  handleRefresh={handleRefreshFiles}
                   page={FILES_PAGE}
-                  setSearchParams={setSearchParams}
+                  setSearchParams={setSearchFilesParams}
                   withRefreshButton
                   withoutExpandButton
                 >
-                  <ArtifactsFilters artifacts={files} />
+                  <ArtifactsFilters artifacts={files} isAllVersions={isAllVersions} />
                 </ActionBar>
               </div>
-              {artifactsStore.loading ? null : files.length === 0 ? (
+              {artifactsStore.loading ? null : tableContent.length === 0 ? (
                 <NoData
                   message={getNoDataMessage(
                     filters,
@@ -116,43 +122,36 @@ const FilesView = React.forwardRef(
                 />
               ) : (
                 <>
-                  {(selectedRowData.loading || artifactsStore.files.fileLoading) && <Loader />}
-                  {maxArtifactsErrorIsShown && (
-                    <WarningMessage
-                      message="The query response displays up to 1000 items. Use filters to narrow down the results."
-                      handleClose={() => setMaxArtifactsErrorIsShown(false)}
-                    />
-                  )}
+                  {artifactsStore.files.fileLoading && <Loader />}
                   <Table
                     actionsMenu={actionsMenu}
                     applyDetailsChanges={applyDetailsChanges}
                     applyDetailsChangesCallback={applyDetailsChangesCallback}
                     detailsFormInitialValues={detailsFormInitialValues}
+                    getCloseDetailsLink={() =>
+                      getCloseDetailsLink(isAllVersions ? ALL_VERSIONS_PATH : FILES_TAB)
+                    }
                     handleCancel={() => setSelectedFileMin({})}
                     pageData={pageData}
                     retryRequest={handleRefreshWithFilters}
                     selectedItem={selectedFile}
-                    sortProps={sortProps}
                     tableClassName="files-table"
                     tableHeaders={tableHeaders ?? []}
-                    virtualizationConfig={virtualizationConfig}
                   >
-                    {tableContent.map(
-                      (tableItem, index) =>
-                        isRowRendered(virtualizationConfig, index) && (
-                          <ArtifactsTableRow
-                            actionsMenu={actionsMenu}
-                            handleSelectItem={handleSelectFile}
-                            key={tableItem.data.ui.identifier}
-                            rowIndex={index}
-                            rowItem={tableItem}
-                            selectedItem={selectedFile}
-                            selectedRowData={selectedRowData}
-                            toggleRow={toggleRow}
-                          />
-                        )
-                    )}
+                    {tableContent.map((tableItem, index) => (
+                      <ArtifactsTableRow
+                        actionsMenu={actionsMenu}
+                        key={tableItem.data.ui.identifierUnique}
+                        rowIndex={index}
+                        rowItem={tableItem}
+                        selectedItem={selectedFile}
+                      />
+                    ))}
                   </Table>
+                  <Pagination
+                    paginationConfig={paginationConfigFilesRef.current}
+                    closeParamName={isAllVersions ? ALL_VERSIONS_PATH : FILES_TAB}
+                  />
                 </>
               )}
               {viewMode === FULL_VIEW_MODE && !isEmpty(selectedFile) && (
@@ -185,28 +184,25 @@ FilesView.propTypes = {
   applyDetailsChangesCallback: PropTypes.func.isRequired,
   artifactsStore: PropTypes.object.isRequired,
   detailsFormInitialValues: PropTypes.object.isRequired,
+  fileName: PropTypes.string,
   files: PropTypes.arrayOf(PropTypes.object).isRequired,
   filters: PropTypes.object.isRequired,
+  filtersConfig: PropTypes.object.isRequired,
   filtersStore: PropTypes.object.isRequired,
   getAndSetSelectedArtifact: PropTypes.func.isRequired,
-  handleRefresh: PropTypes.func.isRequired,
+  handleRefreshFiles: PropTypes.func.isRequired,
   handleRefreshWithFilters: PropTypes.func.isRequired,
   handleRegisterArtifact: PropTypes.func.isRequired,
-  handleSelectFile: PropTypes.func.isRequired,
-  maxArtifactsErrorIsShown: PropTypes.bool.isRequired,
+  isAllVersions: PropTypes.bool.isRequired,
   pageData: PropTypes.object.isRequired,
+  projectName: PropTypes.string.isRequired,
   requestErrorMessage: PropTypes.string.isRequired,
   selectedFile: PropTypes.object.isRequired,
-  selectedRowData: PropTypes.object.isRequired,
-  setMaxArtifactsErrorIsShown: PropTypes.func.isRequired,
-  setSearchParams: PropTypes.func.isRequired,
+  setSearchFilesParams: PropTypes.func.isRequired,
   setSelectedFileMin: PropTypes.func.isRequired,
-  sortProps: SORT_PROPS,
   tableContent: PropTypes.arrayOf(PropTypes.object).isRequired,
   tableHeaders: PropTypes.arrayOf(PropTypes.object).isRequired,
-  toggleRow: PropTypes.func.isRequired,
-  viewMode: PropTypes.string,
-  virtualizationConfig: VIRTUALIZATION_CONFIG.isRequired
+  viewMode: PropTypes.string
 }
 
 export default FilesView

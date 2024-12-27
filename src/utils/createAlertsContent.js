@@ -17,12 +17,12 @@ illegal under applicable law, and the grant of the foregoing license
 under the Apache 2.0 license is conditioned upon your compliance with
 such restriction.
 */
-import classNames from 'classnames'
 import { upperFirst } from 'lodash'
 import { formatDatetime } from './datetime'
 
 import { ReactComponent as Application } from 'igz-controls/images/entity-type-application.svg'
 import { ReactComponent as Endpoint } from 'igz-controls/images/entity-type-endpoint.svg'
+import { ReactComponent as Error } from 'igz-controls/images/severity-warning.svg'
 import { ReactComponent as Critical } from 'igz-controls/images/severity-critical.svg'
 import { ReactComponent as Email } from 'igz-controls/images/email-icon.svg'
 import { ReactComponent as Git } from 'igz-controls/images/git-icon.svg'
@@ -36,6 +36,7 @@ import { ReactComponent as Webhook } from 'igz-controls/images/webhook-icon.svg'
 import {
   APPLICATION,
   ENDPOINT,
+  DETAILS_ALERT_APPLICATION,
   JOB,
   MODEL_ENDPOINT_RESULT,
   MODEL_MONITORING_APPLICATION,
@@ -51,16 +52,31 @@ const getEntityTypeData = entityType => {
     case MODEL_ENDPOINT_RESULT:
       return {
         value: <Endpoint />,
+        detailsValue: (
+          <div className="alert-row__details-alert-icon-cell">
+            <Endpoint /> <span>{upperFirst(ENDPOINT)}</span>
+          </div>
+        ),
         tooltip: upperFirst(ENDPOINT)
       }
     case MODEL_MONITORING_APPLICATION:
       return {
         value: <Application />,
+        detailsValue: (
+          <div className="alert-row__details-alert-icon-cell">
+            <Application /> <span>{upperFirst(APPLICATION)}</span>
+          </div>
+        ),
         tooltip: upperFirst(APPLICATION)
       }
     case JOB:
       return {
         value: <Job />,
+        detailsValue: (
+          <div className="alert-row__details-alert-icon-cell">
+            <Job /> <span>{upperFirst(upperFirst(JOB))}</span>
+          </div>
+        ),
         tooltip: upperFirst(JOB)
       }
     default:
@@ -69,13 +85,38 @@ const getEntityTypeData = entityType => {
       }
   }
 }
+const getTriggerCriticalTimePeriod = line => {
+  const units = {
+    y: 'year',
+    m: 'month',
+    d: 'day',
+    h: 'hour',
+    ms: 'millisecond',
+    s: 'second'
+  }
+
+  const formatPart = part => {
+    const unit = Object.keys(units).find(key => part.endsWith(key))
+    if (!unit) return 'N/A'
+
+    const value = part.slice(0, -unit.length)
+    const isPlural = parseInt(value, 10) > 1
+
+    return `${value} ${units[unit]}${isPlural ? 's' : ''}`
+  }
+
+  const renderValue = line => line.split(/,?\s+/).map(formatPart).join(', ')
+  return {
+    value: <span>{line ? renderValue(line) : 'N/A'}</span>
+  }
+}
 
 const getSeverityData = severity => {
   switch (severity) {
     case SEVERITY_LOW:
       return {
         value: (
-          <div className="severity-cell">
+          <div className="alert-row__details-alert-icon-cell">
             <Low />
             <span>{upperFirst(SEVERITY_LOW)}</span>
           </div>
@@ -85,7 +126,7 @@ const getSeverityData = severity => {
     case SEVERITY_MEDIUM:
       return {
         value: (
-          <div className="severity-cell">
+          <div className="alert-row__details-alert-icon-cell">
             <Normal />
             <span>{upperFirst(SEVERITY_MEDIUM)}</span>
           </div>
@@ -95,7 +136,7 @@ const getSeverityData = severity => {
     case SEVERITY_HIGH:
       return {
         value: (
-          <div className="severity-cell">
+          <div className="alert-row__details-alert-icon-cell">
             <High />
             <span>{upperFirst(SEVERITY_HIGH)}</span>
           </div>
@@ -105,7 +146,7 @@ const getSeverityData = severity => {
     case SEVERITY_CRITICAL:
       return {
         value: (
-          <div className="severity-cell">
+          <div className="alert-row__details-alert-icon-cell">
             <Critical />
             <span>{upperFirst(SEVERITY_CRITICAL)}</span>
           </div>
@@ -128,22 +169,97 @@ const alertsNotifications = {
 
 const getNotificationData = notifications =>
   notifications.map(notification => {
-    const tableCellClassName = classNames('table-cell-notification__content', {
-      'notification-fail': notification.err !== ''
-    })
-
     return {
-      icon: <div className={tableCellClassName}>{alertsNotifications[notification.kind]}</div>,
-      tooltip: upperFirst(notification.kind)
+      icon: (
+        <div
+          data-testid={`${notification.kind}-${notification.err.length === 0 ? 'success' : 'fail'}`}
+          className="alert-row-notification"
+        >
+          {alertsNotifications[notification.kind]}
+          {notification?.err && (
+            <div className="notification-fail">
+              <Error />
+            </div>
+          )}
+        </div>
+      ),
+      tooltip: upperFirst(
+        `${notification.summary.succeeded} success, ${notification.summary.failed} failed`
+      ),
+      kind: notification.kind,
+      succeeded: notification.summary.succeeded,
+      failed: notification.summary.failed
     }
   })
 
-export const createAlertRowData = ({ name, ...alert }) => {
-  alert.id = alert.id.slice(-6) // Use the last 6 characters of the database ID as the alert ID
+export const createAlertRowData = ({ ...alert }, isCrossProjects) => {
+  const { name } = alert
 
+  const getLink = alert => {
+    const queryString = window.location.search
+    const { alertName, entity_kind: entityType, entity_id, id: alertId, job, project, uid } = alert
+
+      if (entityType === MODEL_ENDPOINT_RESULT) {
+      const [endpointId, , , name] = entity_id.split('.')
+      return `/projects/*/alerts/${project}/${alertName}/${alertId}/${name}/${endpointId}/${DETAILS_ALERT_APPLICATION}${queryString}`
+    }
+
+    if (entityType === JOB) {
+      return job
+        ? `/projects/*/alerts/${project}/${alertName}/${alertId}/${job.name}/${job.jobUid}/${DETAILS_ALERT_APPLICATION}${queryString}`
+        : ''
+    }
+
+    if (entityType === MODEL_MONITORING_APPLICATION) {
+      const [, applicationName] = entity_id.split('_')
+      return `/projects/*/alerts/${project}/${alertName}/${alertId}/${applicationName}/${uid}/${DETAILS_ALERT_APPLICATION}${queryString}`
+    }
+
+    return ''
+  }
+
+  const severity = {
+    value: getSeverityData(alert.severity).value,
+    tooltip: getSeverityData(alert.severity).tooltip
+  }
+
+  const entityType = {
+    value: getEntityTypeData(alert.entity_kind).value,
+    detailsValue: getEntityTypeData(alert.entity_kind).detailsValue,
+    tooltip: getEntityTypeData(alert.entity_kind).tooltip
+  }
+  const notifications = getNotificationData(alert.notifications)
+  alert.activationTime = formatDatetime(alert.activation_time, '-')
+  alert.alertName = alert.name
+  alert.id = `${alert.id}`
+
+  if (alert.entity_kind === JOB) {
+    alert.uid = alert.entity_id.split('.')[1]
+    alert.job = {
+      name: alert.entity_id.split('.')[0],
+      jobUid: alert.entity_id.split('.')[1],
+      kind: alert.entity_kind
+    }
+  }
+
+  if (alert.entity_kind === MODEL_ENDPOINT_RESULT) {
+    const [uid, endpointName, ...rest] = alert.entity_id.split('.')
+    const fullName = [endpointName, ...rest].join('.')
+    alert.endpointName = endpointName
+    alert.uid = uid
+    alert.fullName = `${alert.project}.${fullName}`
+  }
+
+  if (alert.entity_kind === MODEL_MONITORING_APPLICATION) {
+    alert.uid = alert.id
+    alert.applicationName = alert.entity_id.split('_')[1]
+  }
   return {
     data: {
-      ...alert
+      ...alert,
+      severity,
+      entityType,
+      notifications
     },
     content: [
       {
@@ -151,9 +267,8 @@ export const createAlertRowData = ({ name, ...alert }) => {
         headerId: 'alertName',
         headerLabel: 'Alert Name',
         value: name,
-        className: 'table-cell-1',
-        getLink: () => {}, //TODO: Implement in ML-8368
-        showStatus: true,
+        className: 'table-cell-name',
+        getLink: () => getLink(alert),
         tooltip: name,
         type: 'link'
       },
@@ -162,7 +277,8 @@ export const createAlertRowData = ({ name, ...alert }) => {
         headerId: 'projectName',
         headerLabel: 'Project name',
         value: alert.project,
-        className: 'table-cell-1'
+        className: 'table-cell-1',
+        hidden: !isCrossProjects
       },
       {
         id: `eventType.${alert.id}`,
@@ -190,7 +306,7 @@ export const createAlertRowData = ({ name, ...alert }) => {
         id: `timestamp.${alert.id}`,
         headerId: 'timestamp',
         headerLabel: 'Timestamp',
-        value: formatDatetime(alert.activation_time, '-'),
+        value: alert.activationTime,
         className: 'table-cell-1'
       },
       {
@@ -212,7 +328,7 @@ export const createAlertRowData = ({ name, ...alert }) => {
         id: `criteriaTime.${alert.id}`,
         headerId: 'criteriaTime',
         headerLabel: 'Trigger criteria time period',
-        value: alert.criteria?.period,
+        value: getTriggerCriticalTimePeriod(alert.criteria?.period).value,
         className: 'table-cell-1'
       },
       {
@@ -220,7 +336,7 @@ export const createAlertRowData = ({ name, ...alert }) => {
         headerId: 'notifications',
         headerLabel: 'Notifications',
         value: getNotificationData(alert.notifications),
-        className: 'table-cell-small table-cell-notification',
+        className: 'icons-container alert-row-notification-cell',
         type: 'icons'
       }
     ]

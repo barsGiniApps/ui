@@ -18,27 +18,27 @@ under the Apache 2.0 license is conditioned upon your compliance with
 such restriction.
 */
 import React from 'react'
-import { isEqual } from 'lodash'
+import { debounce, isEqual } from 'lodash'
 
 import DeleteArtifactPopUp from '../../elements/DeleteArtifactPopUp/DeleteArtifactPopUp'
 
 import {
-  ACTION_MENU_PARENT_ROW,
-  ACTION_MENU_PARENT_ROW_EXPANDED,
   ARTIFACTS_TAB,
   ARTIFACT_MAX_DOWNLOAD_SIZE,
   ARTIFACT_OTHER_TYPE,
   ARTIFACT_TYPE,
+  ALL_VERSIONS_PATH,
   FILES_PAGE,
   FILES_TAB,
   FULL_VIEW_MODE,
   ITERATIONS_FILTER,
   LABELS_FILTER,
   NAME_FILTER,
-  SHOW_ITERATIONS,
   TAG_FILTER,
+  TAG_FILTER_ALL_ITEMS,
   TAG_FILTER_LATEST,
-  VIEW_SEARCH_PARAMETER
+  VIEW_SEARCH_PARAMETER,
+  BE_PAGE
 } from '../../constants'
 import { applyTagChanges, chooseOrFetchArtifact } from '../../utils/artifacts.util'
 import { copyToClipboard } from '../../utils/copyToClipboard'
@@ -46,11 +46,11 @@ import { getIsTargetPathValid } from '../../utils/createArtifactsContent'
 import { showArtifactsPreview } from '../../reducers/artifactsReducer'
 import { generateUri } from '../../utils/resources'
 import { handleDeleteArtifact } from '../../utils/handleDeleteArtifact'
-import { openDeleteConfirmPopUp } from 'igz-controls/utils/common.util'
+import { openDeleteConfirmPopUp, openPopUp } from 'igz-controls/utils/common.util'
 import { searchArtifactItem } from '../../utils/searchArtifactItem'
 import { setDownloadItem, setShowDownloadsList } from '../../reducers/downloadReducer'
-import { openPopUp } from 'igz-controls/utils/common.util'
 import { getFilteredSearchParams } from '../../utils/filter.util'
+import { parseIdentifier } from '../../utils'
 
 import { ReactComponent as TagIcon } from 'igz-controls/images/tag-icon.svg'
 import { ReactComponent as YamlIcon } from 'igz-controls/images/yaml.svg'
@@ -58,13 +58,23 @@ import { ReactComponent as ArtifactView } from 'igz-controls/images/eye-icon.svg
 import { ReactComponent as Copy } from 'igz-controls/images/copy-to-clipboard-icon.svg'
 import { ReactComponent as Delete } from 'igz-controls/images/delete.svg'
 import { ReactComponent as DownloadIcon } from 'igz-controls/images/download.svg'
+import { ReactComponent as HistoryIcon } from 'igz-controls/images/history.svg'
 
-export const filtersConfig = {
-  [NAME_FILTER]: { label: 'Name:', initialValue: '' },
-  [TAG_FILTER]: { label: 'Version tag:', initialValue: TAG_FILTER_LATEST, isModal: true },
+export const getFiltersConfig = isAllVersions => ({
+  [NAME_FILTER]: { label: 'Name:', initialValue: '', hidden: isAllVersions },
+  [TAG_FILTER]: {
+    label: 'Version tag:',
+    initialValue: isAllVersions ? TAG_FILTER_ALL_ITEMS : TAG_FILTER_LATEST,
+    isModal: true
+  },
   [LABELS_FILTER]: { label: 'Labels:', initialValue: '', isModal: true },
-  [ITERATIONS_FILTER]: { label: 'Show best iteration only:', initialValue: SHOW_ITERATIONS, isModal: true }
-}
+  [ITERATIONS_FILTER]: {
+    label: 'Show best iteration only:',
+    initialValue: '',
+    isModal: true,
+    hidden: !isAllVersions
+  }
+})
 
 export const pageDataInitialState = {
   details: {
@@ -129,32 +139,40 @@ export const handleApplyDetailsChanges = (
   return applyTagChanges(changes, selectedItem, projectName, dispatch, setNotification)
 }
 
-export const checkForSelectedFile = (
-  name,
-  selectedRowData,
-  files,
-  tag,
-  iter,
-  uid,
-  navigate,
-  projectName,
-  setSelectedFile
-) => {
-  queueMicrotask(() => {
-    if (name) {
-      const artifacts = selectedRowData?.[name]?.content || files
+export const checkForSelectedFile = debounce(
+  (
+    paramsName,
+    files,
+    paramsId,
+    projectName,
+    setSelectedFile,
+    navigate,
+    isAllVersions,
+    searchParams,
+    paginationConfigRef
+  ) => {
+    if (paramsId) {
+      const searchBePage = parseInt(searchParams.get(BE_PAGE))
+      const configBePage = paginationConfigRef.current[BE_PAGE]
+      const { tag, uid, iter } = parseIdentifier(paramsId)
 
-      if (artifacts.length > 0) {
+      if (files.length > 0 && searchBePage === configBePage) {
         const searchItem = searchArtifactItem(
-          artifacts.map(artifact => artifact.data ?? artifact),
-          name,
+          files.map(artifact => artifact.data ?? artifact),
+          paramsName,
           tag,
           iter,
           uid
         )
 
         if (!searchItem) {
-          navigate(`/projects/${projectName}/files${getFilteredSearchParams(window.location.search, [VIEW_SEARCH_PARAMETER])}`, { replace: true })
+          navigate(
+            `/projects/${projectName}/files${isAllVersions ? `/${paramsName}/${ALL_VERSIONS_PATH}` : ''}${getFilteredSearchParams(
+              window.location.search,
+              [VIEW_SEARCH_PARAMETER]
+            )}`,
+            { replace: true }
+          )
         } else {
           setSelectedFile(prevState => {
             return isEqual(prevState, searchItem) ? prevState : searchItem
@@ -164,8 +182,8 @@ export const checkForSelectedFile = (
     } else {
       setSelectedFile({})
     }
-  })
-}
+  }
+)
 
 export const generateActionsMenu = (
   fileMin,
@@ -176,8 +194,9 @@ export const generateActionsMenu = (
   projectName,
   handleRefresh,
   filters,
-  menuPosition,
   selectedFile,
+  showAllVersions,
+  isAllVersions,
   isDetailsPopUp = false
 ) => {
   const isTargetPathValid = getIsTargetPathValid(fileMin ?? {}, frontendSpec)
@@ -190,13 +209,12 @@ export const generateActionsMenu = (
     [
       {
         label: 'Add a tag',
-        hidden: menuPosition === ACTION_MENU_PARENT_ROW_EXPANDED || isDetailsPopUp,
+        hidden: isDetailsPopUp,
         icon: <TagIcon />,
         onClick: handleAddTag
       },
       {
         label: 'Download',
-        hidden: menuPosition === ACTION_MENU_PARENT_ROW_EXPANDED,
         disabled:
           !isTargetPathValid ||
           fileMin.size >
@@ -221,20 +239,18 @@ export const generateActionsMenu = (
       },
       {
         label: 'Copy URI',
-        hidden: menuPosition === ACTION_MENU_PARENT_ROW_EXPANDED,
         icon: <Copy />,
         onClick: file => copyToClipboard(generateUri(file, ARTIFACTS_TAB), dispatch)
       },
       {
         label: 'View YAML',
-        hidden: menuPosition === ACTION_MENU_PARENT_ROW_EXPANDED,
         icon: <YamlIcon />,
         onClick: fileMin => getFullFile(fileMin).then(toggleConvertedYaml)
       },
       {
         label: 'Delete',
         icon: <Delete />,
-        hidden: [ACTION_MENU_PARENT_ROW, ACTION_MENU_PARENT_ROW_EXPANDED].includes(menuPosition) || isDetailsPopUp,
+        hidden: isDetailsPopUp,
         className: 'danger',
         onClick: () =>
           openPopUp(DeleteArtifactPopUp, {
@@ -246,9 +262,9 @@ export const generateActionsMenu = (
           })
       },
       {
-        label: 'Delete all',
+        label: 'Delete all versions',
         icon: <Delete />,
-        hidden: ![ACTION_MENU_PARENT_ROW, ACTION_MENU_PARENT_ROW_EXPANDED].includes(menuPosition) || isDetailsPopUp,
+        hidden: isAllVersions || isDetailsPopUp,
         className: 'danger',
         onClick: () =>
           openDeleteConfirmPopUp(
@@ -271,6 +287,13 @@ export const generateActionsMenu = (
       }
     ],
     [
+      {
+        id: 'show-all-versions',
+        label: 'Show all versions',
+        icon: <HistoryIcon />,
+        onClick: () => showAllVersions(fileMin.db_key),
+        hidden: isAllVersions
+      },
       {
         label: 'Preview',
         id: 'artifact-preview',

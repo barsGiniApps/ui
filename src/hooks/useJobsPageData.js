@@ -52,6 +52,7 @@ export const useJobsPageData = (initialTabData, selectedTab) => {
   const paginationConfigRunsRef = useRef({})
   const abortControllerRef = useRef(new AbortController())
   const abortJobRef = useRef(null)
+  const fetchJobFunctionsPromiseRef = useRef()
   const params = useParams()
   const [requestErrorMessage, setRequestErrorMessage] = useState('')
   const [scheduledJobs, setScheduledJobs] = useState([])
@@ -235,8 +236,8 @@ export const useJobsPageData = (initialTabData, selectedTab) => {
   )
 
   const handleMonitoring = useCallback(
-    item => {
-      monitorJob(appStore.frontendSpec.jobs_dashboard_url, item, params.projectName)
+    (item, isProject) => {
+      monitorJob(appStore.frontendSpec.jobs_dashboard_url, item, params.projectName, isProject)
     },
     [appStore.frontendSpec.jobs_dashboard_url, params.projectName]
   )
@@ -270,6 +271,7 @@ export const useJobsPageData = (initialTabData, selectedTab) => {
     abortJobRef,
     abortingJobs,
     editableItem,
+    fetchJobFunctionsPromiseRef,
     getWorkflows,
     handleMonitoring,
     handleRefreshJobs: params.jobName ? handleRefreshRuns : handleRefreshJobs,
