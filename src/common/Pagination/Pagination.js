@@ -86,7 +86,7 @@ const Pagination = ({
     if (closeParamName) {
       navigate(getCloseDetailsLink(closeParamName, true), { replace: true })
     }
-  }, [navigate, closeParamName])
+  }, [closeParamName, navigate])
 
   const paginationItems = useMemo(() => {
     if (!paginationConfig[FE_PAGE]) return []
@@ -200,7 +200,7 @@ const Pagination = ({
     }
   }
 
-  const getPageNumberStyle = useCallback((paginationItems, paginationItem, index) => {
+  const getPageNumberStyle = useCallback(paginationItems => {
     const maxPage = max(paginationItems)
     const paginationItemWidth = `${maxPage.toString().length}ch`
 
@@ -208,7 +208,7 @@ const Pagination = ({
   }, [])
 
   const getPaginationPagesStyle = useCallback(
-    (paginationItems, paginationItem, index) => {
+    paginationItems => {
       const maxFePages = paginationConfig[BE_PAGE_SIZE] / paginationConfig[FE_PAGE_SIZE]
       const maxPage = max(paginationItems)
       const maxPageCount = min([7, maxPage, maxFePages])
@@ -261,7 +261,9 @@ const Pagination = ({
                           ? 'pagination-dots'
                           : `pagination-page-${pageItem}`
                       }
-                      onClick={() => goToPage(pageItem)}
+                      onClick={
+                        pageItem !== paginationConfig[FE_PAGE] ? () => goToPage(pageItem) : null
+                      }
                       className={classnames(
                         'pagination-btn',
                         pageItem !== threeDotsString && 'pagination-page-btn',

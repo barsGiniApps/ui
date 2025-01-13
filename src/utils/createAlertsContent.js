@@ -85,14 +85,15 @@ const getEntityTypeData = entityType => {
       }
   }
 }
-const getTriggerCriticalTimePeriod = line => {
+export const getTriggerCriticalTimePeriod = line => {
   const units = {
     y: 'year',
-    m: 'month',
+    w: 'week',
     d: 'day',
     h: 'hour',
-    ms: 'millisecond',
-    s: 'second'
+    m: 'minute',
+    s: 'second',
+    ms: 'millisecond'
   }
 
   const formatPart = part => {
@@ -105,10 +106,7 @@ const getTriggerCriticalTimePeriod = line => {
     return `${value} ${units[unit]}${isPlural ? 's' : ''}`
   }
 
-  const renderValue = line => line.split(/,?\s+/).map(formatPart).join(', ')
-  return {
-    value: <span>{line ? renderValue(line) : 'N/A'}</span>
-  }
+  return line ? line.split(/,?\s+/).map(formatPart).join(', ') : 'N/A'
 }
 
 const getSeverityData = severity => {
@@ -192,14 +190,14 @@ const getNotificationData = notifications =>
     }
   })
 
-export const createAlertRowData = ({ ...alert }, isCrossProjects) => {
+export const createAlertRowData = ({ ...alert }, isCrossProjects, showExpandButton = false) => {
   const { name } = alert
 
   const getLink = alert => {
     const queryString = window.location.search
     const { alertName, entity_kind: entityType, entity_id, id: alertId, job, project, uid } = alert
 
-      if (entityType === MODEL_ENDPOINT_RESULT) {
+    if (entityType === MODEL_ENDPOINT_RESULT) {
       const [endpointId, , , name] = entity_id.split('.')
       return `/projects/*/alerts/${project}/${alertName}/${alertId}/${name}/${endpointId}/${DETAILS_ALERT_APPLICATION}${queryString}`
     }
@@ -268,9 +266,10 @@ export const createAlertRowData = ({ ...alert }, isCrossProjects) => {
         headerLabel: 'Alert Name',
         value: name,
         className: 'table-cell-name',
-        getLink: () => getLink(alert),
+        getLink: () => (!showExpandButton ? getLink(alert) : ''),
         tooltip: name,
-        type: 'link'
+        type: 'link',
+        showExpandButton
       },
       {
         id: `projectName.${alert.id}`,
@@ -300,7 +299,8 @@ export const createAlertRowData = ({ ...alert }, isCrossProjects) => {
         headerLabel: 'Entity Type',
         value: getEntityTypeData(alert.entity_kind).value,
         className: 'table-cell-small',
-        tooltip: getEntityTypeData(alert.entity_kind).tooltip
+        tooltip: getEntityTypeData(alert.entity_kind).tooltip,
+        hidden: !isCrossProjects && showExpandButton
       },
       {
         id: `timestamp.${alert.id}`,
@@ -328,7 +328,7 @@ export const createAlertRowData = ({ ...alert }, isCrossProjects) => {
         id: `criteriaTime.${alert.id}`,
         headerId: 'criteriaTime',
         headerLabel: 'Trigger criteria time period',
-        value: getTriggerCriticalTimePeriod(alert.criteria?.period).value,
+        value: getTriggerCriticalTimePeriod(alert.criteria?.period),
         className: 'table-cell-1'
       },
       {
