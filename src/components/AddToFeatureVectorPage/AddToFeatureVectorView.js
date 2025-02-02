@@ -42,6 +42,7 @@ const AddToFeatureVectorView = React.forwardRef(
       actionsMenu,
       content,
       featureStore,
+      fetchTags,
       filters,
       filtersConfig,
       filtersStore,
@@ -68,12 +69,11 @@ const AddToFeatureVectorView = React.forwardRef(
               filters={filters}
               filtersConfig={filtersConfig}
               handleRefresh={handleRefresh}
-              page={FEATURE_STORE_PAGE}
               setSearchParams={setSearchParams}
               tab={ADD_TO_FEATURE_VECTOR_TAB}
               withoutExpandButton
             >
-              <AddToFeatureVectorFilters content={content} />
+              <AddToFeatureVectorFilters content={content} fetchTags={fetchTags} />
             </ActionBar>
           </div>
         </div>
@@ -134,6 +134,7 @@ AddToFeatureVectorView.propTypes = {
   actionsMenu: PropTypes.array.isRequired,
   content: PropTypes.arrayOf(PropTypes.object).isRequired,
   featureStore: PropTypes.object.isRequired,
+  fetchTags: PropTypes.func.isRequired,
   filters: PropTypes.object.isRequired,
   filtersConfig: PropTypes.object.isRequired,
   filtersStore: PropTypes.object.isRequired,

@@ -59,6 +59,7 @@ import { sortListByDate } from '../../../utils'
 import { isDetailsTabExists } from '../../../utils/link-helper.util'
 import { filtersConfig } from './featureVectors.util'
 import { useFiltersFromSearchParams } from '../../../hooks/useFiltersFromSearchParams.hook'
+import { useMode } from '../../../hooks/mode.hook'
 
 import cssVariables from './featureVectors.scss'
 
@@ -87,6 +88,7 @@ const FeatureVectors = ({
   const navigate = useNavigate()
   const location = useLocation()
   const dispatch = useDispatch()
+  const { isDemoMode } = useMode()
 
   const {
     createVectorPopUpIsOpen,
@@ -95,7 +97,10 @@ const FeatureVectors = ({
     toggleConvertedYaml
   } = React.useContext(FeatureStoreContext)
   const frontendSpec = useSelector(store => store.appStore.frontendSpec)
-  const pageData = useMemo(() => generatePageData(selectedFeatureVector), [selectedFeatureVector])
+  const pageData = useMemo(
+    () => generatePageData(selectedFeatureVector, isDemoMode),
+    [isDemoMode, selectedFeatureVector]
+  )
 
   const detailsFormInitialValues = useMemo(
     () => generateDetailsFormInitialValue(selectedFeatureVector, frontendSpec.internal_labels),
@@ -273,7 +278,7 @@ const FeatureVectors = ({
         }
       }))
 
-      fetchFeatureVector(featureVector.project, featureVector.name, featureVectorsFilters.tag)
+      fetchFeatureVector(featureVector.project, featureVector.name, featureVectorsFilters.tag, featureVectorsFilters.labels)
         .then(result => {
           const content = sortListByDate(parseFeatureVectors(result), 'updated', false).map(
             contentItem =>
@@ -299,7 +304,7 @@ const FeatureVectors = ({
           }))
         })
     },
-    [fetchFeatureVector, featureVectorsFilters.tag, params.projectName]
+    [fetchFeatureVector, featureVectorsFilters.tag, featureVectorsFilters.labels, params.projectName]
   )
 
   const { latestItems, toggleRow } = useGroupContent(

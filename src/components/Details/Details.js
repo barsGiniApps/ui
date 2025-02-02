@@ -17,9 +17,9 @@ illegal under applicable law, and the grant of the foregoing license
 under the Apache 2.0 license is conditioned upon your compliance with
 such restriction.
 */
-import React, { useEffect, useCallback, useRef, useMemo } from 'react'
+import React, { useEffect, useCallback, useRef, useMemo, useState } from 'react'
 import PropTypes from 'prop-types'
-import { useBlocker, useLocation, useParams } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
 import { connect, useDispatch, useSelector } from 'react-redux'
 import { createForm } from 'final-form'
 import arrayMutators from 'final-form-arrays'
@@ -34,6 +34,7 @@ import DetailsTabsContent from './DetailsTabsContent/DetailsTabsContent'
 import DetailsHeader from './DetailsHeader/DetailsHeader'
 import Loader from '../../common/Loader/Loader'
 import TabsSlider from '../../common/TabsSlider/TabsSlider'
+import BlockerSpy from '../../common/BlockerSpy/BlockerSpy'
 
 import { TERTIARY_BUTTON, PRIMARY_BUTTON } from 'igz-controls/constants'
 import detailsActions from '../../actions/details'
@@ -43,6 +44,7 @@ import {
   DATASETS_TAB,
   DETAILS_OVERVIEW_TAB,
   DOCUMENTS_TAB,
+  EMPTY_OBJECT,
   FILES_TAB,
   FUNCTIONS_PAGE,
   JOBS_PAGE,
@@ -69,7 +71,7 @@ const Details = ({
   applyDetailsChangesCallback = () => {},
   detailsMenu,
   detailsPopUpSelectedTab = DETAILS_OVERVIEW_TAB,
-  formInitialValues = {},
+  formInitialValues = EMPTY_OBJECT,
   getCloseDetailsLink = null,
   handleCancel = null,
   handleRefresh = () => {},
@@ -95,6 +97,7 @@ const Details = ({
   tab = '',
   withActionMenu = true
 }) => {
+  const [blocker, setBlocker] = useState({})
   const applyChangesRef = useRef()
   const dispatch = useDispatch()
   const detailsRef = useRef()
@@ -112,6 +115,10 @@ const Details = ({
     setDetailsPopUpInfoContent,
     setInfoContent
   ])
+  const pathnameWithoutTab = useMemo(
+    () => location.pathname.substring(0, location.pathname.lastIndexOf(params.tab)),
+    [location.pathname, params.tab]
+  )
 
   const detailsPanelClassNames = classnames(
     'table__item',
@@ -120,7 +127,7 @@ const Details = ({
     isDetailsPopUp && 'table__item-popup'
   )
 
-  const formRef = React.useRef(
+  const formRef = useRef(
     createForm({
       initialValues: formInitialValues,
       mutators: { ...arrayMutators, setFieldState },
@@ -139,9 +146,11 @@ const Details = ({
 
   useEffect(() => {
     return () => {
-      resetChanges()
+      if (!isDetailsPopUp) {
+        resetChanges()
+      }
     }
-  }, [resetChanges])
+  }, [isDetailsPopUp, resetChanges])
 
   useEffect(() => {
     if (!isEveryObjectValueEmpty(selectedItem)) {
@@ -158,15 +167,29 @@ const Details = ({
         pageData.details.type === DOCUMENTS_TAB
       ) {
         setDetailsInfo(
-          generateArtifactsContent(pageData.details.type, selectedItem, params.projectName)
+          generateArtifactsContent(
+            pageData.details.type,
+            selectedItem,
+            params.projectName,
+            isDetailsPopUp
+          )
         )
       } else if (pageData.details.type === FUNCTIONS_PAGE) {
         setDetailsInfo(generateFunctionsContent(selectedItem))
       } else {
-        setDetailsInfo(generateFeatureStoreContent(pageData.details.type, selectedItem))
+        setDetailsInfo(
+          generateFeatureStoreContent(pageData.details.type, selectedItem, isDetailsPopUp)
+        )
       }
     }
-  }, [pageData.details.type, params.projectName, selectedItem, setDetailsInfo, location.search])
+  }, [
+    isDetailsPopUp,
+    location.search,
+    pageData.details.type,
+    params.projectName,
+    setDetailsInfo,
+    selectedItem
+  ])
 
   useEffect(() => {
     return () => {
@@ -206,28 +229,38 @@ const Details = ({
     }
   }, [handleRefreshClick])
 
-  let blocker = useBlocker(({ currentLocation, nextLocation }) => {
-    const currentLocationPathname = currentLocation.pathname.split('/')
-    const nextLocationPathname = nextLocation.pathname.split('/')
-    currentLocationPathname.pop()
-    nextLocationPathname.pop()
+  const shouldDetailsBlock = useCallback(
+    ({ currentLocation, nextLocation }) => {
+      const currentLocationPathname = currentLocation.pathname.split('/')
+      const nextLocationPathname = nextLocation.pathname.split('/')
+      currentLocationPathname.pop()
+      nextLocationPathname.pop()
 
-    return (
-      detailsStore.changes.counter > 0 &&
-      currentLocationPathname.join('/') !== nextLocationPathname.join('/')
-    )
-  })
+      return (
+        detailsStore.changes.counter > 0 &&
+        currentLocationPathname.join('/') !== nextLocationPathname.join('/')
+      )
+    },
+    [detailsStore.changes.counter]
+  )
 
   useEffect(() => {
     if (
       formRef.current &&
       detailsStore.changes.counter === 0 &&
       !isEqual(pickBy(formInitialValues), pickBy(formRef.current.getState()?.values)) &&
-      !formRef.current.getState()?.active
+      !formRef.current.getState()?.values?.labelsAreInEditMode
     ) {
       formRef.current.restart(formInitialValues)
     }
   }, [formInitialValues, detailsStore.changes.counter])
+
+  useEffect(() => {
+    if (!isDetailsPopUp) {
+      formRef.current.restart(formInitialValues)
+      dispatch(detailsActions.setEditMode(false))
+    }
+  }, [dispatch, formInitialValues, isDetailsPopUp, pathnameWithoutTab])
 
   const applyChanges = useCallback(() => {
     applyDetailsChanges(detailsStore.changes).then(() => {
@@ -330,7 +363,7 @@ const Details = ({
                 variant: TERTIARY_BUTTON
               }}
               closePopUp={() => {
-                blocker.proceed?.()
+                blocker.reset?.()
               }}
               confirmButton={{
                 handler: leavePage,
@@ -343,6 +376,9 @@ const Details = ({
                 detailsStore.filtersWasHandled ? 'Refreshing the list' : 'Leaving this page'
               } will discard your changes.`}
             />
+          )}
+          {!isDetailsPopUp && (
+            <BlockerSpy setBlocker={setBlocker} shouldBlock={shouldDetailsBlock} />
           )}
         </div>
       )}

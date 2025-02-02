@@ -21,30 +21,32 @@ import { useCallback, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useDispatch } from 'react-redux'
 
-import { BE_PAGE, BE_PAGE_SIZE, FILTER_ALL_ITEMS, PROJECTS_FILTER } from '../constants'
+import { BE_PAGE, BE_PAGE_SIZE, PROJECT_FILTER, PROJECTS_FILTER_ALL_ITEMS } from '../constants'
 import { usePagination } from './usePagination.hook'
 import { fetchAlerts } from '../reducers/alertsReducer'
 
 export const useAlertsPageData = (filters, isAlertsPage) => {
-  const [alerts, setAlerts] = useState([])
+  const [alerts, setAlerts] = useState(null)
   const [requestErrorMessage, setRequestErrorMessage] = useState('')
+  const paginationConfigAlertsRef = useRef({})
+  const lastCheckedAlertIdRef = useRef(null)
 
   const abortControllerRef = useRef(new AbortController())
-  const paginationConfigAlertsRef = useRef({})
 
   const params = useParams()
   const dispatch = useDispatch()
 
   const refreshAlerts = useCallback(
     filters => {
-      setAlerts([])
+      setAlerts(null)
+      lastCheckedAlertIdRef.current = null
       abortControllerRef.current = new AbortController()
-
       const projectName = !isAlertsPage
         ? params.projectName || params.id
-        : filters?.[PROJECTS_FILTER]?.toLowerCase?.() !== FILTER_ALL_ITEMS
-          ? filters?.[PROJECTS_FILTER]?.toLowerCase?.()
-          : params.id
+        : filters?.[PROJECT_FILTER]?.toLowerCase?.() !== PROJECTS_FILTER_ALL_ITEMS &&
+            params?.projectName !== PROJECTS_FILTER_ALL_ITEMS
+          ? filters[PROJECT_FILTER]?.toLowerCase()
+          : params.id || params.projectName
 
       dispatch(
         fetchAlerts({
@@ -64,19 +66,22 @@ export const useAlertsPageData = (filters, isAlertsPage) => {
       )
         .unwrap()
         .then(response => {
-          if (response?.activations?.length > 0) {
-            setAlerts(response.activations)
+          if (response?.activations) {
+            setAlerts(response.activations.length > 0 ? response.activations : [])
+            paginationConfigAlertsRef.current.paginationResponse = response.pagination
           } else {
             setAlerts([])
           }
-          paginationConfigAlertsRef.current.paginationResponse = response.pagination
+        })
+        .catch(() => {
+          setAlerts([])
         })
     },
     [dispatch, isAlertsPage, params.id, params.projectName]
   )
 
-  const [handleRefreshAlerts, paginatedAlerts, , setSearchParams] = usePagination({
-    content: alerts,
+  const [handleRefreshAlerts, paginatedAlerts, searchParams, setSearchParams] = usePagination({
+    content: alerts ?? [],
     filters,
     refreshContent: refreshAlerts,
     paginationConfigRef: paginationConfigAlertsRef,
@@ -84,11 +89,14 @@ export const useAlertsPageData = (filters, isAlertsPage) => {
   })
   return {
     abortControllerRef,
+    alerts,
     handleRefreshAlerts,
+    lastCheckedAlertIdRef,
     paginatedAlerts,
     paginationConfigAlertsRef,
     refreshAlerts,
     requestErrorMessage,
+    searchParams,
     setAlerts,
     setSearchParams
   }

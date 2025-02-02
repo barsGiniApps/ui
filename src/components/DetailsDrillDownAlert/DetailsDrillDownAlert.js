@@ -35,7 +35,15 @@ import '../DetailsInfo/detailsInfo.scss'
 
 const DetailsDrillDownAlert = React.forwardRef(
   (
-    { detailsStore, isDetailsPopUp, pageData, selectedItem, setChangesCounter, setChangesData },
+    {
+      detailsStore,
+      formState,
+      isDetailsPopUp,
+      pageData,
+      selectedItem,
+      setChangesCounter,
+      setChangesData
+    },
     applyChangesRef
   ) => {
     const openAlertsLogsModal = useCallback(() => {
@@ -46,6 +54,7 @@ const DetailsDrillDownAlert = React.forwardRef(
       <>
         <DetailsInfo
           detailsStore={detailsStore}
+          formState={formState}
           isDetailsPopUp={isDetailsPopUp}
           pageData={pageData}
           ref={applyChangesRef}
@@ -69,12 +78,9 @@ const DetailsDrillDownAlert = React.forwardRef(
             </div>
             <DetailsLogs
               item={selectedItem}
-              logsTitle={pageData.details.logsTitle}
               noDataMessage={pageData.details.logsNoDataMessage}
-              refreshAdditionalLogs={pageData.details.refreshAdditionalLogs}
               refreshLogs={pageData.details.refreshLogs}
-              removeAdditionalLogs={pageData.details.removeAdditionalLogs}
-              removeLogs={() => {}}
+              removeLogs={pageData.details.removeLogs}
               withLogsRefreshBtn
             />
           </>

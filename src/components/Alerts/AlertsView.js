@@ -19,6 +19,7 @@ such restriction.
 */
 import classNames from 'classnames'
 import PropTypes from 'prop-types'
+import { isEmpty } from 'lodash'
 
 import ActionBar from '../ActionBar/ActionBar'
 import AlertsFilters from './AlertsFilters'
@@ -29,9 +30,9 @@ import NoData from '../../common/NoData/NoData'
 import Pagination from '../../common/Pagination/Pagination'
 import Table from '../Table/Table'
 
-import { ALERTS_FILTERS, ALERTS_PAGE } from '../../constants'
+import { ALERTS_FILTERS, ALERTS_PAGE, ALERTS_PAGE_PATH, MONITOR_ALERTS_PAGE } from '../../constants'
 import { getNoDataMessage } from '../../utils/getNoDataMessage'
-import { getCloseDetailsAlertLink } from '../../utils/link-helper.util'
+import { getCloseDetailsLink } from '../../utils/link-helper.util'
 
 import './alerts.scss'
 
@@ -69,11 +70,11 @@ const AlertsView = ({
             <div className="content__action-bar-wrapper">
               <ActionBar
                 autoRefreshIsStopped={true}
+                closeParamName={ALERTS_PAGE_PATH}
                 filterMenuName={ALERTS_FILTERS}
-                filtersConfig={alertsFiltersConfig}
                 filters={filters}
+                filtersConfig={alertsFiltersConfig}
                 handleRefresh={handleRefreshAlerts}
-                page={ALERTS_PAGE}
                 setSearchParams={setSearchParams}
                 withRefreshButton
                 withoutExpandButton
@@ -83,7 +84,7 @@ const AlertsView = ({
             </div>
             {alertsStore.loading ? (
               <Loader />
-            ) : tableContent.length === 0 ? (
+            ) : tableContent.length === 0 && isEmpty(selectedAlert) ? (
               <NoData
                 message={getNoDataMessage(
                   filters,
@@ -96,16 +97,25 @@ const AlertsView = ({
               />
             ) : (
               <>
+              {alertsStore.alertLoading && <Loader />}
                 <Table
                   actionsMenu={[]}
-                  getCloseDetailsLink={() => getCloseDetailsAlertLink()}
+                  getCloseDetailsLink={() =>
+                    getCloseDetailsLink(isCrossProjects ? MONITOR_ALERTS_PAGE : ALERTS_PAGE_PATH)
+                  }
                   pageData={pageData}
                   retryRequest={handleRefreshWithFilters}
                   selectedItem={isAlertsPage ? selectedAlert : {}}
                   tableClassName="alerts-table"
                   handleCancel={handleCancel}
                   hideActionsMenu
-                  tableHeaders={tableContent[0]?.content ?? []}
+                  tableHeaders={tableContent[0]?.content ?? [
+                    {
+                      headerId: 'alertName',
+                      headerLabel: 'Alert Name',
+                      className: 'table-cell-name'
+                    }
+                  ]}
                   withActionMenu={false}
                 >
                   {tableContent.map((tableItem, index) => {
@@ -130,6 +140,7 @@ const AlertsView = ({
                   })}
                 </Table>
                 <Pagination
+                  closeParamName={ALERTS_PAGE_PATH}
                   page={pageData.page}
                   paginationConfig={paginationConfigAlertsRef.current}
                 />

@@ -63,6 +63,7 @@ const ProjectsJobsMonitoring = () => {
   const [selectedCard, setSelectedCard] = useState(
     jobsMonitoringData.filters?.status || STATS_TOTAL_CARD
   )
+  const [autoRefreshPrevValue, setAutoRefreshPrevValue] = useState(false)
   const location = useLocation()
   const params = useParams()
   const navigate = useNavigate()
@@ -70,6 +71,7 @@ const ProjectsJobsMonitoring = () => {
   const jobsStore = useSelector(store => store.jobsStore)
   const workflowsStore = useSelector(store => store.workflowsStore)
   const functionsStore = useSelector(store => store.functionsStore)
+  const filtersStore = useSelector(store => store.filtersStore)
 
   const jobsFiltersConfig = useMemo(
     () => getJobsFiltersConfig(params.jobName, true),
@@ -106,12 +108,15 @@ const ProjectsJobsMonitoring = () => {
     handleMonitoring,
     handleRefreshJobs,
     handleRerunJob,
+    historyBackLink,
     jobRuns,
     jobWizardIsOpened,
     jobWizardMode,
     jobs,
+    lastCheckedJobIdRef,
     paginatedJobs,
     paginationConfigJobsRef,
+    refreshAfterDeleteCallback,
     refreshJobs,
     refreshScheduled,
     requestErrorMessage,
@@ -165,8 +170,8 @@ const ProjectsJobsMonitoring = () => {
   }, [getWorkflows, handleRefreshJobs, initialTabData, refreshScheduled])
 
   const filters = useFiltersFromSearchParams(
-    tabData[selectedTab]?.filtersConfig,
-    tabData[selectedTab]?.parseQueryParamsCallback
+    initialTabData[selectedTab]?.filtersConfig,
+    initialTabData[selectedTab]?.parseQueryParamsCallback
   )
 
   return (
@@ -184,23 +189,23 @@ const ProjectsJobsMonitoring = () => {
                 onClick={handleTabChange}
                 tabs={tabs}
               />
-
               <ActionBar
-                autoRefreshIsEnabled={selectedTab === JOBS_MONITORING_JOBS_TAB}
                 autoRefreshIsStopped={
-                  jobWizardIsOpened ||
-                  jobsStore.loading ||
-                  Boolean(jobsStore.jobLoadingCounter) ||
-                  !isEmpty(selectedJob)
+                  jobWizardIsOpened || jobsStore.loading || Boolean(jobsStore.jobLoadingCounter)
                 }
+                autoRefreshIsEnabled={filtersStore.autoRefresh}
+                autoRefreshStopTrigger={!isEmpty(selectedJob)}
+                closeParamName={params.jobName}
                 filters={filters}
-                filtersConfig={tabData[selectedTab].filtersConfig}
+                filtersConfig={initialTabData[selectedTab].filtersConfig}
                 handleRefresh={tabData[selectedTab].handleRefresh}
+                handleAutoRefreshPrevValueChange={setAutoRefreshPrevValue}
                 hidden={Boolean(params.workflowId)}
                 key={selectedTab}
-                page={JOBS_MONITORING_PAGE}
                 setSearchParams={setSearchParams}
                 tab={selectedTab}
+                withAutoRefresh={selectedTab === JOBS_MONITORING_JOBS_TAB}
+                withInternalAutoRefresh={selectedTab === JOBS_MONITORING_JOBS_TAB && params.jobName}
                 withRefreshButton
                 withoutExpandButton
               >
@@ -213,19 +218,24 @@ const ProjectsJobsMonitoring = () => {
                   abortControllerRef,
                   abortJobRef,
                   abortingJobs,
+                  autoRefreshPrevValue,
                   editableItem,
                   fetchJobFunctionsPromiseRef,
                   getWorkflows,
                   handleMonitoring,
                   handleRerunJob,
+                  historyBackLink,
+                  initialTabData,
                   jobRuns,
                   jobWizardIsOpened,
                   jobWizardMode,
                   jobs,
                   jobsFiltersConfig,
                   jobsMonitoringData,
+                  lastCheckedJobIdRef,
                   paginatedJobs,
                   paginationConfigJobsRef,
+                  refreshAfterDeleteCallback,
                   refreshJobs,
                   refreshScheduled,
                   requestErrorMessage,
@@ -244,6 +254,7 @@ const ProjectsJobsMonitoring = () => {
                   setScheduledJobs,
                   setSelectedCard,
                   setSelectedJob,
+                  setSearchParams,
                   tabData,
                   terminateAbortTasksPolling,
                   workflowsFiltersConfig

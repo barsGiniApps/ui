@@ -52,12 +52,14 @@ import { isDetailsTabExists } from '../../../utils/link-helper.util'
 import { parseChipsData } from '../../../utils/convertChipsData'
 import { parseFeatureSets } from '../../../utils/parseFeatureSets'
 import { setNotification } from '../../../reducers/notificationReducer'
+import { sortListByDate } from '../../../utils'
 import { useGroupContent } from '../../../hooks/groupContent.hook'
 import { useOpenPanel } from '../../../hooks/openPanel.hook'
 import { useVirtualization } from '../../../hooks/useVirtualization.hook'
 import { useInitialTableFetch } from '../../../hooks/useInitialTableFetch.hook'
 import { filtersConfig } from './featureSets.util'
 import { useFiltersFromSearchParams } from '../../../hooks/useFiltersFromSearchParams.hook'
+import { useMode } from '../../../hooks/mode.hook'
 
 import cssVariables from './featureSets.scss'
 
@@ -86,6 +88,7 @@ const FeatureSets = ({
   const navigate = useNavigate()
   const location = useLocation()
   const dispatch = useDispatch()
+  const { isDemoMode } = useMode()
   const frontendSpec = useSelector(store => store.appStore.frontendSpec)
   const detailsFormInitialValues = useMemo(
     () => ({
@@ -99,7 +102,10 @@ const FeatureSets = ({
   const { featureSetsPanelIsOpen, setFeatureSetsPanelIsOpen, toggleConvertedYaml } =
     React.useContext(FeatureStoreContext)
 
-  const pageData = useMemo(() => generatePageData(selectedFeatureSet), [selectedFeatureSet])
+  const pageData = useMemo(
+    () => generatePageData(selectedFeatureSet, isDemoMode),
+    [isDemoMode, selectedFeatureSet]
+  )
 
   const actionsMenu = useMemo(
     () => generateActionsMenu(dispatch, selectedFeatureSet, toggleConvertedYaml),
@@ -190,7 +196,7 @@ const FeatureSets = ({
         }
       }))
 
-      fetchExpandedFeatureSet(item.project, item.name, featureSetsFilters.tag)
+      fetchExpandedFeatureSet(item.project, item.name, featureSetsFilters.tag, featureSetsFilters.labels)
         .then(result => {
           const content = [...parseFeatureSets(result)].map(contentItem =>
             createFeatureSetsRowData(contentItem, params.projectName, FEATURE_SETS_TAB, true)
@@ -215,7 +221,7 @@ const FeatureSets = ({
           }))
         })
     },
-    [fetchExpandedFeatureSet, featureSetsFilters.tag, params.projectName]
+    [fetchExpandedFeatureSet, featureSetsFilters.tag, featureSetsFilters.labels, params.projectName]
   )
 
   const { latestItems, toggleRow } = useGroupContent(
@@ -230,10 +236,10 @@ const FeatureSets = ({
 
   const tableContent = useMemo(() => {
     return filtersStore.groupBy === GROUP_BY_NAME
-      ? latestItems.map(contentItem => {
+      ? sortListByDate(latestItems, 'updated', false).map(contentItem => {
           return createFeatureSetsRowData(contentItem, params.projectName, FEATURE_SETS_TAB, true)
         })
-      : featureSets.map(contentItem =>
+      : sortListByDate(featureSets, 'updated', false).map(contentItem =>
           createFeatureSetsRowData(contentItem, params.projectName, FEATURE_SETS_TAB)
         )
   }, [featureSets, filtersStore.groupBy, latestItems, params.projectName])

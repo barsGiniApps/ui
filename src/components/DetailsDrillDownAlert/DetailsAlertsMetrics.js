@@ -86,6 +86,7 @@ const DetailsAlertsMetrics = ({ selectedItem, filters, isAlertsPage = true }) =>
   const fetchData = useCallback(
     (params, projectName, uid) => {
       metricsValuesAbortController.current = new AbortController()
+
       return dispatch(
         modelEndpointsActions.fetchModelEndpointMetricsValues(
           projectName,
@@ -94,15 +95,13 @@ const DetailsAlertsMetrics = ({ selectedItem, filters, isAlertsPage = true }) =>
           metricsValuesAbortController.current,
           setRequestErrorMessage
         )
-      ).then(metrics => {
-        if (metrics) setMetrics(metrics)
-      })
+      )
     },
-    [dispatch, setMetrics, metricsValuesAbortController]
+    [dispatch, metricsValuesAbortController]
   )
 
   const fetchMetrics = useCallback(() => {
-    if (selectedItem.uid !== prevSelectedEndPointNameRef.current) {
+    if (!isAlertsPage && selectedItem.uid !== prevSelectedEndPointNameRef.current) {
       prevSelectedEndPointNameRef.current = selectedItem.uid
       return
     }
@@ -122,7 +121,14 @@ const DetailsAlertsMetrics = ({ selectedItem, filters, isAlertsPage = true }) =>
         params.end = Date.now()
       }
     }
-    fetchData(params, selectedItem.project, selectedItem.uid).then()
+
+    fetchData(params, selectedItem.project, selectedItem.uid)
+      .then(metrics => {
+        if (metrics) setMetrics(metrics)
+      })
+      .catch(() => {
+        setMetrics([])
+      })
   }, [isAlertsPage, filters, selectedItem, detailsStore.dates.value, fetchData])
 
   useEffect(() => {
@@ -134,8 +140,8 @@ const DetailsAlertsMetrics = ({ selectedItem, filters, isAlertsPage = true }) =>
   }, [fetchMetrics, setMetrics])
 
   return (
-    <div>
-      {isAlertsPage && (
+    <div className="item-info__details-metrics">
+      {isAlertsPage && detailsStore.loadingCounter === 0 && (
         <div className="metrics__custom-filters">
           <DatePicker
             className="details-date-picker"
@@ -184,6 +190,7 @@ const DetailsAlertsMetrics = ({ selectedItem, filters, isAlertsPage = true }) =>
 
 DetailsAlertsMetrics.propTypes = {
   isAlertsPage: PropTypes.bool,
+  filters: PropTypes.object,
   selectedItem: PropTypes.object.isRequired
 }
 

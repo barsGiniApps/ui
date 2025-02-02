@@ -97,7 +97,7 @@ const ProjectsView = ({
           }}
           closePopUp={confirmData.rejectHandler}
           confirmButton={{
-            handler: () => confirmData.confirmHandler(confirmData.item),
+            handler: confirmData.confirmHandler,
             label: confirmData.btnConfirmLabel,
             variant: confirmData.btnConfirmType
           }}
@@ -142,7 +142,7 @@ const ProjectsView = ({
                   setIsDescendingOrder={setIsDescendingOrder}
                 />
                 <PageActionsMenu
-                  actionsMenuHeader={'New Project'}
+                  actionsMenuHeader={'New project'}
                   disabled={projectStore.mlrunUnhealthy.retrying}
                   onClick={() => setCreateProject(true)}
                   showActionsMenu

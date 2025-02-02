@@ -30,7 +30,6 @@ import { ConfirmDialog } from 'igz-controls/components'
 
 import {
   INACTIVE_JOBS_TAB,
-  JOBS_MONITORING_PAGE,
   JOBS_PAGE,
   JOBS_PAGE_PATH,
   MONITOR_JOBS_TAB,
@@ -74,6 +73,7 @@ const Jobs = () => {
   const workflowsStore = useSelector(store => store.workflowsStore)
   const artifactsStore = useSelector(store => store.artifactsStore)
   const appStore = useSelector(store => store.appStore)
+  const filtersStore = useSelector(store => store.filtersStore)
 
   const initialTabData = useMemo(() => {
     return {
@@ -105,12 +105,15 @@ const Jobs = () => {
     handleMonitoring,
     handleRefreshJobs,
     handleRerunJob,
+    historyBackLink,
     jobRuns,
     jobWizardIsOpened,
     jobWizardMode,
     jobs,
+    lastCheckedJobIdRef,
     paginatedJobs,
     paginationConfigJobsRef,
+    refreshAfterDeleteCallback,
     refreshJobs,
     refreshScheduled,
     requestErrorMessage,
@@ -194,8 +197,8 @@ const Jobs = () => {
   }, [navigate, params.pageTab, location])
 
   const filters = useFiltersFromSearchParams(
-    tabData[selectedTab]?.filtersConfig,
-    tabData[selectedTab]?.parseQueryParamsCallback
+    initialTabData[selectedTab]?.filtersConfig,
+    initialTabData[selectedTab]?.parseQueryParamsCallback
   )
 
   return (
@@ -235,22 +238,21 @@ const Jobs = () => {
                   }
                 ]}
                 autoRefreshIsStopped={
-                  jobWizardIsOpened ||
-                  jobsStore.loading ||
-                  Boolean(jobsStore.jobLoadingCounter)
+                  jobWizardIsOpened || jobsStore.loading || Boolean(jobsStore.jobLoadingCounter)
                 }
+                autoRefreshIsEnabled={filtersStore.autoRefresh}
                 autoRefreshStopTrigger={!isEmpty(selectedJob)}
+                closeParamName={params.jobName}
                 filters={filters}
                 filtersConfig={initialTabData[selectedTab].filtersConfig}
-                handleRefresh={tabData[selectedTab].handleRefresh}
                 handleAutoRefreshPrevValueChange={setAutoRefreshPrevValue}
+                handleRefresh={tabData[selectedTab].handleRefresh}
                 hidden={Boolean(params.workflowId)}
                 key={selectedTab}
-                page={JOBS_MONITORING_PAGE}
                 setSearchParams={setSearchParams}
                 tab={selectedTab}
-                withAutoRefresh
-                withInternalAutoRefresh={params.jobName}
+                withAutoRefresh={selectedTab === MONITOR_JOBS_TAB}
+                withInternalAutoRefresh={selectedTab === MONITOR_JOBS_TAB && params.jobName}
                 withRefreshButton
                 withoutExpandButton
               >
@@ -263,23 +265,27 @@ const Jobs = () => {
                   abortControllerRef,
                   abortJobRef,
                   abortingJobs,
+                  autoRefreshPrevValue,
                   editableItem,
                   fetchJobFunctionsPromiseRef,
                   getWorkflows,
                   handleMonitoring,
                   handleRerunJob,
-                  autoRefreshPrevValue,
+                  historyBackLink,
+                  initialTabData,
                   jobRuns,
                   jobWizardIsOpened,
                   jobWizardMode,
                   jobs,
-                  jobsFiltersConfig: tabData[MONITOR_JOBS_TAB].filtersConfig,
+                  jobsFiltersConfig: initialTabData[MONITOR_JOBS_TAB].filtersConfig,
+                  lastCheckedJobIdRef,
                   paginatedJobs,
                   paginationConfigJobsRef,
+                  refreshAfterDeleteCallback,
                   refreshJobs,
                   refreshScheduled,
                   requestErrorMessage,
-                  scheduledFiltersConfig: tabData[SCHEDULE_TAB].filtersConfig,
+                  scheduledFiltersConfig: initialTabData[SCHEDULE_TAB].filtersConfig,
                   scheduledJobs,
                   searchParams,
                   selectedJob,
@@ -291,10 +297,11 @@ const Jobs = () => {
                   setJobWizardMode,
                   setJobs,
                   setScheduledJobs,
+                  setSearchParams,
                   setSelectedJob,
                   tabData,
                   terminateAbortTasksPolling,
-                  workflowsFiltersConfig: tabData[MONITOR_WORKFLOWS_TAB].filtersConfig
+                  workflowsFiltersConfig: initialTabData[MONITOR_WORKFLOWS_TAB].filtersConfig
                 }}
               >
                 <Outlet />

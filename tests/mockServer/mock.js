@@ -1033,6 +1033,18 @@ function getProjectsSchedules(req, res) {
     )
   }
 
+  if (req.query['next_run_time_since']) {
+    collectedSchedules = collectedSchedules.filter(
+      schedule => Date.parse(schedule.next_run_time) >= Date.parse(req.query['next_run_time_since'])
+    )
+  }
+
+  if (req.query['next_run_time_until']) {
+    collectedSchedules = collectedSchedules.filter(
+      schedule => Date.parse(schedule.next_run_time) <= Date.parse(req.query['next_run_time_until'])
+    )
+  }
+
   res.send({ schedules: collectedSchedules })
 }
 
@@ -2028,7 +2040,7 @@ function postSubmitJob(req, res) {
     funcObject.spec.volumes = req.body.function.spec.volumes
     funcObject.status = {}
 
-    const functionSpec = `${runProject}/${req.body.task.spec.handler}@${funcUID}`
+    const functionSpec = `${runProject}/${req.body.task.metadata.name}@${funcUID}`
     respTemplate.data.spec.function = functionSpec
     job.spec.function = functionSpec
 
@@ -2317,7 +2329,8 @@ function getModelEndpoints(req, res) {
       ...endpoint,
       status: {
         ...endpoint.status,
-        drift_measures: null,
+        drift_measures: endpoint.status?.drift_measures ?? {},
+        state: 'ready',
         features: null
       }
     }))
@@ -2340,6 +2353,14 @@ function getModelEndpoints(req, res) {
     collectedEndpoints = collectedEndpoints.filter(endpoint =>
       filterByLabels(endpoint.metadata.labels, req.query['label'])
     )
+  }
+
+  if (req.query['endpoint_id']) {
+    const modelEndpoint = collectedEndpoints.find(
+      endpoint => endpoint.metadata.uid === req.query.endpoint_id
+    )
+
+    return res.send(modelEndpoint)
   }
 
   res.send({ endpoints: collectedEndpoints })
@@ -2775,6 +2796,7 @@ app.get(`${mlrunAPIIngress}/log/:project/:uid`, getLog)
 app.get(`${mlrunAPIIngress}/projects/:project/runtime-resources`, getRuntimeResources)
 
 app.get(`${mlrunAPIIngress}/projects/:project/model-endpoints`, getModelEndpoints)
+app.get(`${mlrunAPIIngress}/projects/:project/model-endpoints/:endpoint`, getModelEndpoints)
 app.get(`${mlrunAPIIngress}/projects/:project/model-endpoints/:uid/metrics`, getMetrics)
 app.get(
   `${mlrunAPIIngress}/projects/:project/model-endpoints/:uid/metrics-values`,

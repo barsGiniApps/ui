@@ -17,18 +17,23 @@ illegal under applicable law, and the grant of the foregoing license
 under the Apache 2.0 license is conditioned upon your compliance with
 such restriction.
 */
-import { mainHttpClient } from '../httpClient'
+import React, { useEffect } from 'react'
+import PropTypes from 'prop-types'
+import { useBlocker } from 'react-router-dom'
 
-const alertsApi = {
-  getAlerts: (project, newConfig) => {
-    return mainHttpClient.get(`/projects/${project}/alert-activations`, newConfig)
-  },
-  getAlert: (project, alertName, newConfig) => {
-    return mainHttpClient.get(`/projects/${project}/alerts/${alertName}/activations`, newConfig)
-  },
-  getAlertById: (project, id) => {
-    return mainHttpClient.get(`/projects/${project}/alert-activations/${id}`)
-  }
+const BlockerSpy = ({ setBlocker, shouldBlock }) => {
+  const blocker = useBlocker(shouldBlock)
+
+  useEffect(() => {
+    setBlocker(blocker)
+  }, [setBlocker, blocker])
+
+  return <></>
 }
 
-export default alertsApi
+BlockerSpy.propTypes = {
+  setBlocker: PropTypes.func.isRequired,
+  shouldBlock: PropTypes.func.isRequired
+}
+
+export default BlockerSpy
