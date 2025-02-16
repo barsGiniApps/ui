@@ -47,31 +47,28 @@ jobs:
 
       - name: Identify first failed step
         if: ${{ always() }}
-        id: identify_failure
+        id: identify_failure_or_cancellation
         run: |
-          echo ${{ github.action_status }}
-          echo ${{ job.status }}
-
-          if [ "${{ steps.checkout_code.outcome }}" = "failure" ] || [ "${{ steps.checkout_code.outcome }}" = "cancelled" ]; then
+          if [ "${{ steps.checkout_code.outcome }}" = "failure" ]; then
             echo "FAILED_STEP=Checkout code" >> $GITHUB_ENV
-          elif [ "${{ steps.setup_node.outcome }}" = "failure" ] || [ "${{ steps.setup_node.outcome }}" = "cancelled" ]; then
+          elif [ "${{ steps.setup_node.outcome }}" = "failure" ]; then
             echo "FAILED_STEP=Set up Node.js" >> $GITHUB_ENV
-          elif [ "${{ steps.install_dependencies.outcome }}" = "failure" ] || [ "${{ steps.install_dependencies.outcome }}" = "cancelled" ]; then
+          elif [ "${{ steps.install_dependencies.outcome }}" = "failure" ]; then
             echo "FAILED_STEP=Install dependencies" >> $GITHUB_ENV
-          elif [ "${{ steps.run_parallel_tasks.outcome }}" = "failure" ] || [ "${{ steps.run_parallel_tasks.outcome }}" = "cancelled" ]; then
+          elif [ "${{ steps.run_parallel_tasks.outcome }}" = "failure" ]; then
             echo "FAILED_STEP=Run parallel tasks" >> $GITHUB_ENV
-          elif [ "${{ steps.upload_reports.outcome }}" = "failure" ] || [ "${{ steps.upload_reports.outcome }}" = "cancelled" ]; then
+          elif [ "${{ steps.upload_reports.outcome }}" = "failure" ]; then
             echo "FAILED_STEP=Upload test reports" >> $GITHUB_ENV
           else
             echo "FAILED_STEP=" >> $GITHUB_ENV
           fi
 
-      - name: Post PR comment (success or failure)
+      - name: Post PR comment (success, failure, or cancelled)
         if: github.event_name == 'pull_request' && always()
         uses: actions/github-script@v6
         with:
           script: |
-            const jobStatus = process.env.GITHUB_JOB_STATUS || "failure"; // the overall job status
+            const jobStatus = process.env.GITHUB_JOB_STATUS || "failure"; // your overall job status
             const failedStep = process.env.FAILED_STEP; // set by your previous "Identify first failed step" step
 
             if (jobStatus === 'success') {
@@ -80,6 +77,13 @@ jobs:
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
                 body: "**Regression Test workflow finished successfully.** ✅"
+              });
+            } else if (jobStatus === 'cancelled') {
+              github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: "**Regression Test workflow was cancelled.** ⚠️"
               });
             } else {
               let body = "**Regression Test workflow failed.** ❌";
