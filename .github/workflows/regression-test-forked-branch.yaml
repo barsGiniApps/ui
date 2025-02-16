@@ -14,6 +14,11 @@ jobs:
     name: Regression Test in forked branch
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'Require Test'))
+    env:
+      REACT_APP_FUNCTION_CATALOG_URL: ${{ secrets.REACT_APP_FUNCTION_CATALOG_URL }}
+      REACT_APP_MLRUN_API_URL: ${{ secrets.REACT_APP_MLRUN_API_URL }}
+      REACT_APP_NUCLIO_API_URL: ${{ secrets.REACT_APP_NUCLIO_API_URL }}
+      REACT_APP_IGUAZIO_API_URL: ${{ secrets.REACT_APP_IGUAZIO_API_URL }}
 
     steps:
       - name: Checkout code
@@ -65,6 +70,8 @@ jobs:
 
       - name: Post PR comment (success, failure, or cancelled)
         if: github.event_name == 'pull_request' && always()
+        env:
+          JOB_STATUS: ${{ job.status }}
         uses: actions/github-script@v6
         with:
           script: |
