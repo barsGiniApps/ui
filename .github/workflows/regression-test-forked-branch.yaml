@@ -19,8 +19,6 @@ jobs:
       - name: Checkout code
         id: checkout_code
         uses: actions/checkout@v4
-        with:
-          token: 'asdadsda'
 
       - name: Set up Node.js
         id: setup_node
@@ -69,10 +67,10 @@ jobs:
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: context.issue.number,
-                body: "✅ **Regression Test workflow finished successfully.**"
+                body: "**Regression Test workflow finished successfully.** ✅"
               });
             } else {
-              let body = "❌ **Regression Test workflow failed.**";
+              let body = "**Regression Test workflow failed.** ❌";
               if (failedStep) {
                 body += `\nFailed step: **${failedStep}**`;
               } else {
