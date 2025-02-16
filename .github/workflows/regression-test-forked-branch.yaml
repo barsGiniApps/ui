@@ -68,8 +68,8 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            const jobStatus = process.env.GITHUB_JOB_STATUS || "failure"; // your overall job status
-            const failedStep = process.env.FAILED_STEP; // set by your previous "Identify first failed step" step
+            const jobStatus = process.env.JOB_STATUS;
+            const failedStep = process.env.FAILED_STEP;
 
             if (jobStatus === 'success') {
               github.rest.issues.createComment({
