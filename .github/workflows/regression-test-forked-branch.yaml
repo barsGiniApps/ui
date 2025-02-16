@@ -22,20 +22,25 @@ jobs:
 
     steps:
       - name: Checkout code
+        id: checkout_code
         uses: actions/checkout@v3
 
-      - name: Test Fail Step
+      - name: Test Fail Step (example forced fail)
+        id: test_fail_step
         run: false
 
       - name: Set up Node.js
+        id: setup_node
         uses: actions/setup-node@v3
         with:
           node-version: '16'
 
       - name: Install dependencies
+        id: install_dependencies
         run: npm install
 
       - name: Run parallel tasks
+        id: run_parallel_tasks
         run: |
           npm run add-comment-to-http-client &
           npm run mock-server &
@@ -44,12 +49,13 @@ jobs:
         continue-on-error: true
 
       - name: Upload test reports
-        id: upload-reports
+        id: upload_reports
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
           path: tests/reports
 
+      # Post success comment on PR
       - name: Post success comment on PR
         if: ${{ github.event_name == 'pull_request' && success() }}
         uses: actions/github-script@v6
@@ -59,7 +65,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: "✅ **Regression Test workflow finished successfully.**"
+              body: "✅ **Regression Test in forked branch finished successfully.**"
             })
 
       - name: Post failure comment on PR
@@ -67,9 +73,37 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
+            // Collect the names of any failed steps:
+            const failedSteps = [];
+            
+            // Check outcome of each step we care about:
+            if (steps.checkout_code.outcome === 'failure') {
+              failedSteps.push("Checkout code");
+            }
+            if (steps.test_fail_step.outcome === 'failure') {
+              failedSteps.push("Test Fail Step");
+            }
+            if (steps.setup_node.outcome === 'failure') {
+              failedSteps.push("Set up Node.js");
+            }
+            if (steps.install_dependencies.outcome === 'failure') {
+              failedSteps.push("Install dependencies");
+            }
+            if (steps.run_parallel_tasks.outcome === 'failure') {
+              failedSteps.push("Run parallel tasks");
+            }
+            if (steps.upload_reports.outcome === 'failure') {
+              failedSteps.push("Upload test reports");
+            }
+
+            let body = `❌ **Regression Test workflow did NOT finish successfully.**`;
+            if (failedSteps.length) {
+              body += `\n**Failed step(s):** ${failedSteps.join(', ')}`;
+            }
+
             github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: "❌ **Regression Test workflow did NOT finish successfully.**"
-            })
+              body: body
+            });
