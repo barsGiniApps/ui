@@ -6,11 +6,14 @@ on:
       - remote-regression-test-runs
     tags:
       - "@require-test"
+  pull_request:
+    types: [labeled, opened, reopened, synchronize]
 
 jobs:
   regression-test-forked:
     name: Regression Test in forked branch
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, '@require-test'))
     env:
       REACT_APP_FUNCTION_CATALOG_URL: ${{ secrets.REACT_APP_FUNCTION_CATALOG_URL }}
       REACT_APP_MLRUN_API_URL: ${{ secrets.REACT_APP_MLRUN_API_URL }}
@@ -35,7 +38,6 @@ jobs:
           npm run mock-server &
           npm start &
           npm run test:regression
-
         continue-on-error: true
 
       - name: Upload test reports
