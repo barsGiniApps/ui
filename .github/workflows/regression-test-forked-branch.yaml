@@ -20,10 +20,6 @@ jobs:
         id: checkout_code
         uses: actions/checkout@v3
 
-      - name: Example forced fail
-        id: forced_fail
-        run: false  # <--- always fails (remove if not needed)
-
       - name: Set up Node.js
         id: setup_node
         uses: actions/setup-node@v3
@@ -37,6 +33,7 @@ jobs:
       - name: Run parallel tasks
         id: run_parallel_tasks
         run: |
+          false
           npm run add-comment-to-http-client &
           npm run mock-server &
           npm start &
@@ -50,8 +47,6 @@ jobs:
           # We'll check each step in order and set an env var for the first failure.
           if [ "${{ steps.checkout_code.outcome }}" = "failure" ]; then
             echo "FAILED_STEP=Checkout code" >> $GITHUB_ENV
-          elif [ "${{ steps.forced_fail.outcome }}" = "failure" ]; then
-            echo "FAILED_STEP=Forced fail" >> $GITHUB_ENV
           elif [ "${{ steps.setup_node.outcome }}" = "failure" ]; then
             echo "FAILED_STEP=Set up Node.js" >> $GITHUB_ENV
           elif [ "${{ steps.install_dependencies.outcome }}" = "failure" ]; then
