@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - remote-regression-test-runs
+    tags:
+      - "@require-test"
 
 jobs:
   regression-test-forked:
