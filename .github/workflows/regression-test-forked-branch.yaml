@@ -28,23 +28,20 @@ jobs:
 
       - name: Install dependencies
         id: install_dependencies
-        run: npm install
+        run: npm installllll
 
       - name: Run parallel tasks
         id: run_parallel_tasks
         run: |
-          false
           npm run add-comment-to-http-client &
           npm run mock-server &
           npm start &
           npm run test:regression
 
       - name: Identify first failed step
-        # This always runs, even if a previous step failed
         if: ${{ always() }}
         id: identify_failure
         run: |
-          # We'll check each step in order and set an env var for the first failure.
           if [ "${{ steps.checkout_code.outcome }}" = "failure" ]; then
             echo "FAILED_STEP=Checkout code" >> $GITHUB_ENV
           elif [ "${{ steps.setup_node.outcome }}" = "failure" ]; then
