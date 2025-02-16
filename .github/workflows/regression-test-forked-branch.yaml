@@ -13,7 +13,7 @@ jobs:
   regression-test-forked:
     name: Regression Test in forked branch
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'require test'))
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'Require Test'))
     env:
       REACT_APP_FUNCTION_CATALOG_URL: ${{ secrets.REACT_APP_FUNCTION_CATALOG_URL }}
       REACT_APP_MLRUN_API_URL: ${{ secrets.REACT_APP_MLRUN_API_URL }}
@@ -32,6 +32,9 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Test Fail Step
+        run: false
+
       - name: Run parallel tasks
         run: |
           npm run add-comment-to-http-client &
@@ -41,7 +44,44 @@ jobs:
         continue-on-error: true
 
       - name: Upload test reports
+        id: upload-reports
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
           path: tests/reports
+
+      - name: Add comment to PR
+        uses: actions/github-script@v6
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+        with:
+          script: |
+            const github = require('@actions/github');
+            const context = github.context;
+            let commentBody = '';
+
+            if (process.env.JOB_STATUS === 'success') {
+              commentBody = 'Testing workflow finished successfully';
+            } else if (process.env.JOB_STATUS === 'failure') {
+              // Iterate through the steps to find the failed one
+              let failedStepName = '';
+              for (const step of context.job) {
+                  if (step.conclusion === 'failure') {
+                      failedStepName = step.name;
+                      break;
+                  }
+              }
+              commentBody = `Testing workflow failed on step: ${failedStepName}`;
+            } else {
+              commentBody = 'Testing workflow status is: ${{ job.status }}';
+            }
+
+            if (context.eventName === 'pull_request') {
+              github.getOctokit(process.env.GITHUB_TOKEN).rest.issues.createComment({
+                issue_number: context.payload.pull_request.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: commentBody
+              });
+            }
