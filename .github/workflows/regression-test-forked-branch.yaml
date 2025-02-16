@@ -49,8 +49,9 @@ jobs:
         if: ${{ always() }}
         id: identify_failure
         run: |
-          echo {{ github.action_status }}
-          
+          echo ${{ github.action_status }}
+          echo ${{ job.status }}
+
           if [ "${{ steps.checkout_code.outcome }}" = "failure" ] || [ "${{ steps.checkout_code.outcome }}" = "cancelled" ]; then
             echo "FAILED_STEP=Checkout code" >> $GITHUB_ENV
           elif [ "${{ steps.setup_node.outcome }}" = "failure" ] || [ "${{ steps.setup_node.outcome }}" = "cancelled" ]; then
