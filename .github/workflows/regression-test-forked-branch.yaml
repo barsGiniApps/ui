@@ -24,6 +24,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Test Fail Step
+        run: false
+
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
@@ -31,9 +34,6 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-
-      - name: Test Fail Step
-        run: false
 
       - name: Run parallel tasks
         run: |
@@ -58,11 +58,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           script: |
-            const core = require('@actions/core');
-            const github = require('@actions/github');
-            const context = github.context;
-
             try {
+              const core = require('@actions/core');
+              const github = require('@actions/github');
+              const context = github.context;
+
               let commentBody = '';
 
               if (process.env.JOB_STATUS === 'success') {
@@ -101,5 +101,6 @@ jobs:
                 });
               }
             } catch (error) {
+              const core = require('@actions/core');
               core.setFailed(error.message);
             }
