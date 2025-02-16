@@ -50,57 +50,26 @@ jobs:
           name: test-reports
           path: tests/reports
 
-      - name: Add comment to PR
+      - name: Post success comment on PR
+        if: ${{ github.event_name == 'pull_request' && success() }}
         uses: actions/github-script@v6
-        if: always()
-        env:
-          JOB_STATUS: ${{ job.status }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           script: |
-            try {
-              const core = require('@actions/core');
-              const github = require('@actions/github');
-              const context = github.context;
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: "✅ **Regression Test workflow finished successfully.**"
+            })
 
-              let commentBody = '';
-
-              if (process.env.JOB_STATUS === 'success') {
-                commentBody = 'Testing workflow finished successfully';
-              } else if (process.env.JOB_STATUS === 'failure') {
-                // Iterate through the steps to find the failed one
-                let failedStepName = '';
-                if (context.payload.workflow_run && context.payload.workflow_run.conclusion === 'failure') {
-                  const jobs = await github.getOctokit(process.env.GITHUB_TOKEN).rest.actions.listJobsForWorkflowRun({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    run_id: context.payload.workflow_run.id
-                  });
-
-                  if (jobs && jobs.data && jobs.data.jobs) {
-                    const failedJob = jobs.data.jobs.find(job => job.conclusion === 'failure');
-                    if (failedJob && failedJob.steps) {
-                      const failedStep = failedJob.steps.find(step => step.conclusion === 'failure');
-                      if (failedStep) {
-                        failedStepName = failedStep.name;
-                      }
-                    }
-                  }
-                }
-                commentBody = `Testing workflow failed on step: ${failedStepName}`;
-              } else {
-                commentBody = 'Testing workflow status is: ${{ job.status }}';
-              }
-
-              if (context.eventName === 'pull_request') {
-                await github.getOctokit(process.env.GITHUB_TOKEN).rest.issues.createComment({
-                  issue_number: context.payload.pull_request.number,
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  body: commentBody
-                });
-              }
-            } catch (error) {
-              const core = require('@actions/core');
-              core.setFailed(error.message);
-            }
+      - name: Post failure comment on PR
+        if: ${{ github.event_name == 'pull_request' && failure() }}
+        uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: "❌ **Regression Test workflow did NOT finish successfully.**"
+            })
