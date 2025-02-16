@@ -18,13 +18,13 @@ jobs:
     steps:
       - name: Checkout code
         id: checkout_code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v32
 
       - name: Set up Node.js
         id: setup_node
         uses: actions/setup-node@v3
         with:
-          node-version: '1655'
+          node-version: '16'
 
       - name: Install dependencies
         id: install_dependencies
