@@ -14,19 +14,14 @@ jobs:
     name: Regression Test in forked branch
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'Require Test'))
-    env:
-      REACT_APP_FUNCTION_CATALOG_URL: ${{ secrets.REACT_APP_FUNCTION_CATALOG_URL }}
-      REACT_APP_MLRUN_API_URL: ${{ secrets.REACT_APP_MLRUN_API_URL }}
-      REACT_APP_NUCLIO_API_URL: ${{ secrets.REACT_APP_NUCLIO_API_URL }}
-      REACT_APP_IGUAZIO_API_URL: ${{ secrets.REACT_APP_IGUAZIO_API_URL }}
 
     steps:
       - name: Checkout code
         id: checkout_code
         uses: actions/checkout@v3
 
-      - name: Test Fail Step (example forced fail)
-        id: test_fail_step
+      - name: Example forced fail
+        id: forced_fail
         run: false
 
       - name: Set up Node.js
@@ -46,64 +41,55 @@ jobs:
           npm run mock-server &
           npm start &
           npm run test:regression
-        continue-on-error: true
 
-      - name: Upload test reports
-        id: upload_reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-reports
-          path: tests/reports
+      - name: Identify first failed step
+        # This always runs, even if a previous step failed
+        if: ${{ always() }}
+        id: identify_failure
+        run: |
+          # We'll check each step in order and set an env var for the first failure.
+          if [ "${{ steps.checkout_code.outcome }}" = "failure" ]; then
+            echo "FAILED_STEP=Checkout code" >> $GITHUB_ENV
+          elif [ "${{ steps.forced_fail.outcome }}" = "failure" ]; then
+            echo "FAILED_STEP=Forced fail" >> $GITHUB_ENV
+          elif [ "${{ steps.setup_node.outcome }}" = "failure" ]; then
+            echo "FAILED_STEP=Set up Node.js" >> $GITHUB_ENV
+          elif [ "${{ steps.install_dependencies.outcome }}" = "failure" ]; then
+            echo "FAILED_STEP=Install dependencies" >> $GITHUB_ENV
+          elif [ "${{ steps.run_parallel_tasks.outcome }}" = "failure" ]; then
+            echo "FAILED_STEP=Run parallel tasks" >> $GITHUB_ENV
+          else
+            echo "FAILED_STEP=" >> $GITHUB_ENV
+          fi
 
-      # Post success comment on PR
-      - name: Post success comment on PR
-        if: ${{ github.event_name == 'pull_request' && success() }}
+      - name: Post PR comment (success or failure)
+        # We use `always()` so we can run this step even if there's a failure.
+        # The step itself will decide how to comment based on job.status
+        if: ${{ github.event_name == 'pull_request' && always() }}
         uses: actions/github-script@v6
         with:
           script: |
-            github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: "✅ **Regression Test in forked branch finished successfully.**"
-            })
-
-      - name: Post failure comment on PR
-        if: ${{ github.event_name == 'pull_request' && failure() }}
-        uses: actions/github-script@v6
-        with:
-          script: |
-            // Collect the names of any failed steps:
-            const failedSteps = [];
-            
-            // Check outcome of each step we care about:
-            if (steps.checkout_code.outcome === 'failure') {
-              failedSteps.push("Checkout code");
-            }
-            if (steps.test_fail_step.outcome === 'failure') {
-              failedSteps.push("Test Fail Step");
-            }
-            if (steps.setup_node.outcome === 'failure') {
-              failedSteps.push("Set up Node.js");
-            }
-            if (steps.install_dependencies.outcome === 'failure') {
-              failedSteps.push("Install dependencies");
-            }
-            if (steps.run_parallel_tasks.outcome === 'failure') {
-              failedSteps.push("Run parallel tasks");
-            }
-            if (steps.upload_reports.outcome === 'failure') {
-              failedSteps.push("Upload test reports");
-            }
-
-            let body = `❌ **Regression Test workflow did NOT finish successfully.**`;
-            if (failedSteps.length) {
-              body += `\n**Failed step(s):** ${failedSteps.join(', ')}`;
-            }
-
-            github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: body
-            });
+            const jobStatus = process.env.GITHUB_JOB_STATUS || "${{ job.status }}"; // the overall job status
+            const failedStep = process.env.FAILED_STEP; // set by the "Identify first failed step" step
+            if (jobStatus === 'success') {
+              // Post a success comment
+              github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: "✅ **Regression Test workflow finished successfully.**"
+              });
+            } else {
+              // Post a failure comment
+              let body = "❌ **Regression Test workflow did NOT finish successfully.**"
+              if (failedStep) {
+                body += `\nFailed step: **${failedStep}**`
+              } else {
+                body += "\nFailed step: Unknown"
+              }
+              github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: body
+              });
