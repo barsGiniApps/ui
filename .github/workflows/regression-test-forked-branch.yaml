@@ -24,11 +24,11 @@ jobs:
         id: setup_node
         uses: actions/setup-node@v3
         with:
-          node-version: '16'
+          node-version: '1655'
 
       - name: Install dependencies
         id: install_dependencies
-        run: npm installllll
+        run: npm install
 
       - name: Run parallel tasks
         id: run_parallel_tasks
