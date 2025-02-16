@@ -71,7 +71,6 @@ jobs:
             const failedStep = process.env.FAILED_STEP; // set by your previous "Identify first failed step" step
 
             if (jobStatus === 'success') {
-              // Post a success comment
               github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
@@ -79,8 +78,7 @@ jobs:
                 body: "✅ **Regression Test workflow finished successfully.**"
               });
             } else {
-              // Post a failure comment
-              let body = "❌ **Regression Test workflow did NOT finish successfully.**";
+              let body = "❌ **Regression Test workflow failed.**";
               if (failedStep) {
                 body += `\nFailed step: **${failedStep}**`;
               } else {
