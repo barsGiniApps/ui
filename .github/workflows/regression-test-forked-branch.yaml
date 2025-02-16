@@ -38,18 +38,29 @@ jobs:
           npm start &
           npm run test:regression
 
+      - name: Upload test reports
+        id: upload_reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: tests/reports
+
       - name: Identify first failed step
         if: ${{ always() }}
         id: identify_failure
         run: |
-          if [ "${{ steps.checkout_code.outcome }}" = "failure" ]; then
+          echo {{ github.action_status }}
+          
+          if [ "${{ steps.checkout_code.outcome }}" = "failure" ] || [ "${{ steps.checkout_code.outcome }}" = "cancelled" ]; then
             echo "FAILED_STEP=Checkout code" >> $GITHUB_ENV
-          elif [ "${{ steps.setup_node.outcome }}" = "failure" ]; then
+          elif [ "${{ steps.setup_node.outcome }}" = "failure" ] || [ "${{ steps.setup_node.outcome }}" = "cancelled" ]; then
             echo "FAILED_STEP=Set up Node.js" >> $GITHUB_ENV
-          elif [ "${{ steps.install_dependencies.outcome }}" = "failure" ]; then
+          elif [ "${{ steps.install_dependencies.outcome }}" = "failure" ] || [ "${{ steps.install_dependencies.outcome }}" = "cancelled" ]; then
             echo "FAILED_STEP=Install dependencies" >> $GITHUB_ENV
-          elif [ "${{ steps.run_parallel_tasks.outcome }}" = "failure" ]; then
+          elif [ "${{ steps.run_parallel_tasks.outcome }}" = "failure" ] || [ "${{ steps.run_parallel_tasks.outcome }}" = "cancelled" ]; then
             echo "FAILED_STEP=Run parallel tasks" >> $GITHUB_ENV
+          elif [ "${{ steps.upload_reports.outcome }}" = "failure" ] || [ "${{ steps.upload_reports.outcome }}" = "cancelled" ]; then
+            echo "FAILED_STEP=Upload test reports" >> $GITHUB_ENV
           else
             echo "FAILED_STEP=" >> $GITHUB_ENV
           fi
