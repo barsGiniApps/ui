@@ -22,7 +22,7 @@ jobs:
 
       - name: Example forced fail
         id: forced_fail
-        run: false
+        run: false  # <--- always fails (remove if not needed)
 
       - name: Set up Node.js
         id: setup_node
@@ -42,35 +42,14 @@ jobs:
           npm start &
           npm run test:regression
 
-      - name: Identify first failed step
-        # This always runs, even if a previous step failed
-        if: ${{ always() }}
-        id: identify_failure
-        run: |
-          # We'll check each step in order and set an env var for the first failure.
-          if [ "${{ steps.checkout_code.outcome }}" = "failure" ]; then
-            echo "FAILED_STEP=Checkout code" >> $GITHUB_ENV
-          elif [ "${{ steps.forced_fail.outcome }}" = "failure" ]; then
-            echo "FAILED_STEP=Forced fail" >> $GITHUB_ENV
-          elif [ "${{ steps.setup_node.outcome }}" = "failure" ]; then
-            echo "FAILED_STEP=Set up Node.js" >> $GITHUB_ENV
-          elif [ "${{ steps.install_dependencies.outcome }}" = "failure" ]; then
-            echo "FAILED_STEP=Install dependencies" >> $GITHUB_ENV
-          elif [ "${{ steps.run_parallel_tasks.outcome }}" = "failure" ]; then
-            echo "FAILED_STEP=Run parallel tasks" >> $GITHUB_ENV
-          else
-            echo "FAILED_STEP=" >> $GITHUB_ENV
-          fi
-
       - name: Post PR comment (success or failure)
-        # We use `always()` so we can run this step even if there's a failure.
-        # The step itself will decide how to comment based on job.status
-        if: ${{ github.event_name == 'pull_request' && always() }}
+        if: github.event_name == 'pull_request' && always()
         uses: actions/github-script@v6
         with:
           script: |
-            const jobStatus = process.env.GITHUB_JOB_STATUS || "${{ job.status }}"; // the overall job status
-            const failedStep = process.env.FAILED_STEP; // set by the "Identify first failed step" step
+            const jobStatus = process.env.GITHUB_JOB_STATUS || "failure"; // the overall job status
+            const failedStep = process.env.FAILED_STEP; // set by your previous "Identify first failed step" step
+
             if (jobStatus === 'success') {
               // Post a success comment
               github.rest.issues.createComment({
@@ -81,11 +60,11 @@ jobs:
               });
             } else {
               // Post a failure comment
-              let body = "❌ **Regression Test workflow did NOT finish successfully.**"
+              let body = "❌ **Regression Test workflow did NOT finish successfully.**";
               if (failedStep) {
-                body += `\nFailed step: **${failedStep}**`
+                body += `\nFailed step: **${failedStep}**`;
               } else {
-                body += "\nFailed step: Unknown"
+                body += "\nFailed step: Unknown";
               }
               github.rest.issues.createComment({
                 owner: context.repo.owner,
@@ -93,3 +72,4 @@ jobs:
                 issue_number: context.issue.number,
                 body: body
               });
+            }
