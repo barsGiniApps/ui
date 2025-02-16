@@ -42,6 +42,26 @@ jobs:
           npm start &
           npm run test:regression
 
+      - name: Identify first failed step
+        # This always runs, even if a previous step failed
+        if: ${{ always() }}
+        id: identify_failure
+        run: |
+          # We'll check each step in order and set an env var for the first failure.
+          if [ "${{ steps.checkout_code.outcome }}" = "failure" ]; then
+            echo "FAILED_STEP=Checkout code" >> $GITHUB_ENV
+          elif [ "${{ steps.forced_fail.outcome }}" = "failure" ]; then
+            echo "FAILED_STEP=Forced fail" >> $GITHUB_ENV
+          elif [ "${{ steps.setup_node.outcome }}" = "failure" ]; then
+            echo "FAILED_STEP=Set up Node.js" >> $GITHUB_ENV
+          elif [ "${{ steps.install_dependencies.outcome }}" = "failure" ]; then
+            echo "FAILED_STEP=Install dependencies" >> $GITHUB_ENV
+          elif [ "${{ steps.run_parallel_tasks.outcome }}" = "failure" ]; then
+            echo "FAILED_STEP=Run parallel tasks" >> $GITHUB_ENV
+          else
+            echo "FAILED_STEP=" >> $GITHUB_ENV
+          fi
+
       - name: Post PR comment (success or failure)
         if: github.event_name == 'pull_request' && always()
         uses: actions/github-script@v6
