@@ -96,7 +96,7 @@ jobs:
         contains(github.event.pull_request.labels.*.name, 'Require Test') &&
         github.event.pull_request.head.repo.fork == true &&
         github.event.pull_request.base.ref == 'development'
-      )
+      ) && always()
     env:
           JOB_STATUS: ${{ needs.run-tests.result }}
           FAILED_STEP: ${{ needs.run-tests.outputs.failed_step }}
