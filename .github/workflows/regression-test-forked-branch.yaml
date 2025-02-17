@@ -43,7 +43,7 @@ jobs:
           echo test > tests/reports/test.txt
 
       - name: Create cache for test reports
-        uses: actions/cache@v4
+        uses: actions/cache/save@v4
         with:
           path: tests/reports
           key: reports
