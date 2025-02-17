@@ -12,7 +12,15 @@ jobs:
   run-tests:
     name: Regression Tests - Run tests
     runs-on: ubuntu-24.04
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'Require Test') && github.event.pull_request.head.repo.fork == true)
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push' ||
+      (
+        github.event_name == 'pull_request' &&
+        contains(github.event.pull_request.labels.*.name, 'Require Test') &&
+        github.event.pull_request.head.repo.fork == true &&
+        github.event.pull_request.base.ref == 'development'
+      )
     env:
       REACT_APP_FUNCTION_CATALOG_URL: ${{ secrets.REACT_APP_FUNCTION_CATALOG_URL }}
       REACT_APP_MLRUN_API_URL: ${{ secrets.REACT_APP_MLRUN_API_URL }}
@@ -22,6 +30,12 @@ jobs:
       failed_step: ${{ steps.identify_failure.outputs.FAILED_STEP }}
       job_status: ${{ job.status }}
     steps:
+      
+      - name: Display GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
+
       - name: Checkout code
         id: checkout_code
         uses: actions/checkout@v4
@@ -74,7 +88,15 @@ jobs:
     name: Regression Test - comment on PR
     runs-on: ubuntu-24.04
     needs: run-tests
-    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'Require Test') && github.event.pull_request.head.repo.fork == true && always()
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push' ||
+      (
+        github.event_name == 'pull_request' &&
+        contains(github.event.pull_request.labels.*.name, 'Require Test') &&
+        github.event.pull_request.head.repo.fork == true &&
+        github.event.pull_request.base.ref == 'development'
+      )
     env:
           JOB_STATUS: ${{ needs.run-tests.result }}
           FAILED_STEP: ${{ needs.run-tests.outputs.failed_step }}
