@@ -7,6 +7,8 @@ on:
       - remote-regression-test-runs
   pull_request:
     types: [labeled, opened, reopened, synchronize]
+    branches:
+      - tests/* # Example branch
 
 jobs:
   run-tests:
