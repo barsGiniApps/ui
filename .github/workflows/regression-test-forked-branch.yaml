@@ -19,7 +19,7 @@ jobs:
       REACT_APP_NUCLIO_API_URL: ${{ secrets.REACT_APP_NUCLIO_API_URL }}
       REACT_APP_IGUAZIO_API_URL: ${{ secrets.REACT_APP_IGUAZIO_API_URL }}
     outputs:
-      failed_step: ${{ steps.identify_failure.outputs.failed_step }}
+      failed_step: ${{ steps.identify_failure.outputs.FAILED_STEP }}
     steps:
       - name: Checkout code
         id: checkout_code
@@ -61,8 +61,6 @@ jobs:
           else
             echo "FAILED_STEP=" >> $GITHUB_ENV
           fi
-
-          echo "::set-output name=failed_step::$FAILED_STEP"
       
   upload-artifact:
     name: Regression Tests - Upload test reports
@@ -87,9 +85,9 @@ jobs:
     name: Regression Test - comment on PR
     runs-on: ubuntu-24.04
     needs: run-tests
+    if: ${{ github.event_name == 'pull_request' && always() }}
     steps:
       - name: Post PR comment (success, failure, or cancelled)
-        if: github.event_name == 'pull_request' && always()
         env:
           JOB_STATUS: ${{ needs.run-tests.result }}
           FAILED_STEP: ${{ needs.run-tests.outputs.failed_step }}
