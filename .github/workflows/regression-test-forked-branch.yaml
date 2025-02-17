@@ -39,8 +39,10 @@ jobs:
       - name: Run parallel tasks
         id: run_parallel_tasks
         run: |
-          mkdir -p tests/reports/
-          echo test > tests/reports/test.txt
+          npm run add-comment-to-http-client &
+          npm run mock-server &
+          npm start &
+          npm run test:regression
 
       - name: Upload test reports
         id: upload_reports
