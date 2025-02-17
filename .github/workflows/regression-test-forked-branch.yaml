@@ -1,4 +1,4 @@
-name: regression-test-forked-branch
+name: Regression Tests Forked Branch
 
 on:
   workflow_dispatch:
