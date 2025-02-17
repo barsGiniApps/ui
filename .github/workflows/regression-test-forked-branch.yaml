@@ -74,7 +74,7 @@ jobs:
     name: Regression Test - comment on PR
     runs-on: ubuntu-24.04
     needs: run-tests
-    if: ${{ github.event_name == 'pull_request' && always() }}
+    if: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'Require Test') && github.event.pull_request.head.repo.fork == true && always() }}
     env:
           JOB_STATUS: ${{ needs.run-tests.result }}
           FAILED_STEP: ${{ needs.run-tests.outputs.failed_step }}
