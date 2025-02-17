@@ -42,11 +42,12 @@ jobs:
           mkdir -p tests/reports/
           echo test > tests/reports/test.txt
 
-      - name: Create cache for test reports
-        uses: actions/cache/save@v4
+      - name: Upload test reports
+        id: upload_reports
+        uses: actions/upload-artifact@v4
         with:
+          name: test-reports
           path: tests/reports
-          key: reports
 
       - name: Identify failed step
         if: ${{ always() }}
@@ -61,28 +62,10 @@ jobs:
             FAILED_STEP="Install dependencies"
           elif [ "${{ steps.run_parallel_tasks.outcome }}" = "failure" ]; then
             FAILED_STEP="Run parallel tasks"
+          elif [ "${{ steps.upload_reports.outcome }}" = "failure" ]; then
+            FAILED_STEP="Upload test reports" 
           fi
           echo "failed_step=$FAILED_STEP" >> $GITHUB_OUTPUT
-
-      
-  upload-artifact:
-    name: Regression Tests - Upload test reports
-    runs-on: ubuntu-24.04
-    needs: run-tests
-    steps:
-
-      - name: Restore cached reports
-        uses: actions/cache/restore@v4
-        with:
-          path: tests/reports
-          key: reports
-
-      - name: Upload test reports
-        id: upload_reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-reports
-          path: tests/reports
 
   comment-pr:
     name: Regression Test - comment on PR
