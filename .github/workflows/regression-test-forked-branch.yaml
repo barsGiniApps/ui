@@ -51,6 +51,7 @@ jobs:
         if: ${{ always() }}
         id: identify_failure
         run: |
+          FAILED_STEP=""
           if [ "${{ steps.checkout_code.outcome }}" = "failure" ]; then
             echo "FAILED_STEP=Checkout code" >> $GITHUB_ENV
           elif [ "${{ steps.setup_node.outcome }}" = "failure" ]; then
@@ -59,9 +60,9 @@ jobs:
             echo "FAILED_STEP=Install dependencies" >> $GITHUB_ENV
           elif [ "${{ steps.run_parallel_tasks.outcome }}" = "failure" ]; then
             echo "FAILED_STEP=Run parallel tasks" >> $GITHUB_ENV
-          else
-            echo "FAILED_STEP=" >> $GITHUB_ENV
           fi
+
+          echo "failed_step=$FAILED_STEP" >> $GITHUB_OUTPUT
       
   upload-artifact:
     name: Regression Tests - Upload test reports
@@ -96,6 +97,7 @@ jobs:
         run:
           echo status1 $JOB_STATUS
           echo status2 $JOB_STATUS2
+          echo failed_step $FAILED_STEP
 
       - name: Post PR comment (success, failure, or cancelled)
         uses: actions/github-script@v6
@@ -118,7 +120,7 @@ jobs:
                 issue_number: context.issue.number,
                 body: "**Regression Test workflow was cancelled.** ⚠️"
               });
-            } else {
+            } else if (jobStatus === 'failure') {
               let body = "**Regression Test workflow failed.** ❌";
               if (failedStep) {
                 body += `\nFailed step: **${failedStep}**`;
