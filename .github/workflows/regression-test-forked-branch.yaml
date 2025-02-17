@@ -12,7 +12,7 @@ jobs:
   run-tests:
     name: Regression Tests - Run tests
     runs-on: ubuntu-24.04
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'Require Test'))
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'Require Test') && github.event.pull_request.head.repo.fork == true)
     env:
       REACT_APP_FUNCTION_CATALOG_URL: ${{ secrets.REACT_APP_FUNCTION_CATALOG_URL }}
       REACT_APP_MLRUN_API_URL: ${{ secrets.REACT_APP_MLRUN_API_URL }}
