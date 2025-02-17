@@ -48,6 +48,7 @@ jobs:
         with:
           name: test-reports
           path: tests/reports/not-exists
+          if-no-files-found: error
 
       - name: Identify failed step
         if: ${{ always() }}
