@@ -4,22 +4,21 @@ on:
   push:
     branches:
       - remote-regression-test-runs
-    tags:
-      - "@require-test"
   pull_request:
     types: [labeled, opened, reopened, synchronize]
 
 jobs:
-  regression-test-forked:
-    name: Regression Test in forked branch
-    runs-on: ubuntu-latest
+  run-tests:
+    name: Regression Tests - Run tests
+    runs-on: ubuntu-24.04
     if: github.event_name == 'push' || (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'Require Test'))
     env:
       REACT_APP_FUNCTION_CATALOG_URL: ${{ secrets.REACT_APP_FUNCTION_CATALOG_URL }}
       REACT_APP_MLRUN_API_URL: ${{ secrets.REACT_APP_MLRUN_API_URL }}
       REACT_APP_NUCLIO_API_URL: ${{ secrets.REACT_APP_NUCLIO_API_URL }}
       REACT_APP_IGUAZIO_API_URL: ${{ secrets.REACT_APP_IGUAZIO_API_URL }}
-
+    outputs:
+      failed_step: ${{ steps.identify_failure.outputs.failed_step }}
     steps:
       - name: Checkout code
         id: checkout_code
@@ -34,7 +33,7 @@ jobs:
       - name: Install dependencies
         id: install_dependencies
         run: npm install
-
+          
       - name: Run parallel tasks
         id: run_parallel_tasks
         run: |
@@ -43,16 +42,15 @@ jobs:
           npm start &
           npm run test:regression
 
-      - name: Upload test reports
-        id: upload_reports
-        uses: actions/upload-artifact@v4
+      - name: Create cache for test reports
+        uses: actions/cache@v4
         with:
-          name: test-reports
           path: tests/reports
+          key: reports
 
-      - name: Identify first failed step
+      - name: Identify failed step
         if: ${{ always() }}
-        id: identify_failure_or_cancellation
+        id: identify_failure
         run: |
           if [ "${{ steps.checkout_code.outcome }}" = "failure" ]; then
             echo "FAILED_STEP=Checkout code" >> $GITHUB_ENV
@@ -62,16 +60,41 @@ jobs:
             echo "FAILED_STEP=Install dependencies" >> $GITHUB_ENV
           elif [ "${{ steps.run_parallel_tasks.outcome }}" = "failure" ]; then
             echo "FAILED_STEP=Run parallel tasks" >> $GITHUB_ENV
-          elif [ "${{ steps.upload_reports.outcome }}" = "failure" ]; then
-            echo "FAILED_STEP=Upload test reports" >> $GITHUB_ENV
           else
             echo "FAILED_STEP=" >> $GITHUB_ENV
           fi
 
+          echo "::set-output name=failed_step::$FAILED_STEP"
+      
+  upload-artifact:
+    name: Regression Tests - Upload test reports
+    runs-on: ubuntu-24.04
+    needs: run-tests
+    steps:
+
+      - name: Restore cached reports
+        uses: actions/cache/restore@v4
+        with:
+          path: tests/reports
+          key: reports
+
+      - name: Upload test reports
+        id: upload_reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: tests/reports
+
+  comment-pr:
+    name: Regression Test - comment on PR
+    runs-on: ubuntu-24.04
+    needs: run-tests
+    steps:
       - name: Post PR comment (success, failure, or cancelled)
         if: github.event_name == 'pull_request' && always()
         env:
-          JOB_STATUS: ${{ job.status }}
+          JOB_STATUS: ${{ needs.run-tests.result }}
+          FAILED_STEP: ${{ needs.run-tests.outputs.failed_step }}
         uses: actions/github-script@v6
         with:
           script: |
@@ -106,5 +129,4 @@ jobs:
                 body: body
               });
             }
-
             
