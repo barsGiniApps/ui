@@ -74,14 +74,13 @@ jobs:
     if: ${{ github.event_name == 'pull_request' && always() }}
     env:
           JOB_STATUS: ${{ needs.run-tests.result }}
-          JOB_STATUS2: ${{ needs.run-tests.outputs.job_status }}
           FAILED_STEP: ${{ needs.run-tests.outputs.failed_step }}
     steps:
       - name: Post PR comment (success, failure, or cancelled)
         uses: actions/github-script@v6
         with:
           script: |
-            const jobStatus = process.env.JOB_STATUS;
+            const jobStatus = process.env.JOB_STATUSs;
             const failedStep = process.env.FAILED_STEP;
 
             if (jobStatus === 'success') {
