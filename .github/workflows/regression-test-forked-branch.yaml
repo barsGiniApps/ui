@@ -19,7 +19,7 @@ jobs:
         github.event_name == 'pull_request' &&
         contains(github.event.pull_request.labels.*.name, 'Require Test') &&
         github.event.pull_request.head.repo.fork == true &&
-        github.event.pull_request.base.ref == 'main'
+        github.event.pull_request.base.ref == 'development'
       )
     env:
       REACT_APP_FUNCTION_CATALOG_URL: ${{ secrets.REACT_APP_FUNCTION_CATALOG_URL }}
@@ -95,7 +95,7 @@ jobs:
         github.event_name == 'pull_request' &&
         contains(github.event.pull_request.labels.*.name, 'Require Test') &&
         github.event.pull_request.head.repo.fork == true &&
-        github.event.pull_request.base.ref == 'main'
+        github.event.pull_request.base.ref == 'development'
       ) && always()
     env:
           JOB_STATUS: ${{ needs.run-tests.result }}
