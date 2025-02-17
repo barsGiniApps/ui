@@ -6,6 +6,7 @@ on:
       - remote-regression-test-runs
   pull_request:
     types: [labeled, opened, reopened, synchronize]
+  workflow_dispatch:
 
 jobs:
   run-tests:
@@ -37,6 +38,7 @@ jobs:
       - name: Run parallel tasks
         id: run_parallel_tasks
         run: |
+          true
           npm run add-comment-to-http-client &
           npm run mock-server &
           npm start &
