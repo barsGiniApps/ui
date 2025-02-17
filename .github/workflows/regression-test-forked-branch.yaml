@@ -20,6 +20,7 @@ jobs:
       REACT_APP_IGUAZIO_API_URL: ${{ secrets.REACT_APP_IGUAZIO_API_URL }}
     outputs:
       failed_step: ${{ steps.identify_failure.outputs.FAILED_STEP }}
+      job_status: ${{ job.status }}
     steps:
       - name: Checkout code
         id: checkout_code
@@ -86,11 +87,17 @@ jobs:
     runs-on: ubuntu-24.04
     needs: run-tests
     if: ${{ github.event_name == 'pull_request' && always() }}
-    steps:
-      - name: Post PR comment (success, failure, or cancelled)
-        env:
+    env:
           JOB_STATUS: ${{ needs.run-tests.result }}
+          JOB_STATUS2: ${{ needs.run-tests.outputs.job_status }}
           FAILED_STEP: ${{ needs.run-tests.outputs.failed_step }}
+    steps:
+      - name: Test envs
+        run:
+          echo status1 $JOB_STATUS
+          echo status2 $JOB_STATUS2
+
+      - name: Post PR comment (success, failure, or cancelled)
         uses: actions/github-script@v6
         with:
           script: |
