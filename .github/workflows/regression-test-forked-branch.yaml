@@ -30,7 +30,7 @@ jobs:
         id: setup_node
         uses: actions/setup-node@v4
         with:
-          node-version: '162'
+          node-version: '16'
 
       - name: Install dependencies
         id: install_dependencies
@@ -39,7 +39,8 @@ jobs:
       - name: Run parallel tasks
         id: run_parallel_tasks
         run: |
-          true
+          mkdir -p tests/reports/
+          echo test > tests/reports/test.txt
 
       - name: Create cache for test reports
         uses: actions/cache@v4
@@ -93,12 +94,6 @@ jobs:
           JOB_STATUS2: ${{ needs.run-tests.outputs.job_status }}
           FAILED_STEP: ${{ needs.run-tests.outputs.failed_step }}
     steps:
-      - name: Test envs
-        run:
-          echo status1 $JOB_STATUS
-          echo status2 $JOB_STATUS2
-          echo failed_step $FAILED_STEP
-
       - name: Post PR comment (success, failure, or cancelled)
         uses: actions/github-script@v6
         with:
