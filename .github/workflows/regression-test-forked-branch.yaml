@@ -47,7 +47,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
-          path: tests/reports/not-exists
+          path: tests/reports/
           if-no-files-found: error
 
       - name: Identify failed step
