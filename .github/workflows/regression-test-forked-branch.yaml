@@ -7,9 +7,9 @@ on:
       - remote-regression-test-runs
   pull_request:
     types: [labeled, opened, reopened, synchronize]
-    branches:
-      - tests/*
-      
+    # branches:
+    #   - tests/*
+
 jobs:
   run-regression-tests:
     runs-on: ubuntu-latest
