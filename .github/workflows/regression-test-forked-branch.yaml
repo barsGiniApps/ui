@@ -28,12 +28,6 @@ jobs:
       failed_step: ${{ steps.identify_failure.outputs.FAILED_STEP }}
       job_status: ${{ job.status }}
     steps:
-      
-      - name: Display GitHub context
-        env:
-          GITHUB_CONTEXT: ${{ toJson(github) }}
-        run: echo "$GITHUB_CONTEXT"
-
       - name: Checkout code
         id: checkout_code
         uses: actions/checkout@v4
