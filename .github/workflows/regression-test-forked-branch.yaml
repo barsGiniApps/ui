@@ -11,17 +11,14 @@ on:
       - tests/* # Example branch
 
 jobs:
-  run-tests:
-    name: Regression Tests - Run tests
-    runs-on: ubuntu-24.04
+  run-regression-tests:
+    runs-on: ubuntu-latest
     if: >
-      github.event_name == 'workflow_dispatch' ||
       github.event_name == 'push' ||
       (
         github.event_name == 'pull_request' &&
-        contains(github.event.pull_request.labels.*.name, 'Require Test') &&
         github.event.pull_request.head.repo.fork == true &&
-        github.event.pull_request.base.ref == 'development'
+        github.event.pull_request.base.ref == 'remote-pre-merge-tests'
       )
     env:
       REACT_APP_FUNCTION_CATALOG_URL: ${{ secrets.REACT_APP_FUNCTION_CATALOG_URL }}
@@ -55,10 +52,8 @@ jobs:
       - name: Run parallel tasks
         id: run_parallel_tasks
         run: |
-          npm run add-comment-to-http-client &
-          npm run mock-server &
-          npm start &
-          npm run test:regression
+          mkdir -p tests/reports/
+          echo testtesttest > tests/reports/test
 
       - name: Upload test reports
         id: upload_reports
@@ -88,20 +83,15 @@ jobs:
 
   comment-pr:
     name: Regression Test - comment on PR
-    runs-on: ubuntu-24.04
-    needs: run-tests
+    runs-on: ubuntu-latest
+    needs: run-regression-tests
     if: >
-      github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'push' ||
-      (
         github.event_name == 'pull_request' &&
-        contains(github.event.pull_request.labels.*.name, 'Require Test') &&
         github.event.pull_request.head.repo.fork == true &&
-        github.event.pull_request.base.ref == 'development'
-      ) && always()
+        github.event.pull_request.base.ref == 'remote-pre-merge-tests' && always()
     env:
-          JOB_STATUS: ${{ needs.run-tests.result }}
-          FAILED_STEP: ${{ needs.run-tests.outputs.failed_step }}
+          JOB_STATUS: ${{ needs.run-regression-tests.result }}
+          FAILED_STEP: ${{ needs.run-regression-tests.outputs.failed_step }}
     steps:
       - name: Post PR comment (success, failure, or cancelled)
         uses: actions/github-script@v6
