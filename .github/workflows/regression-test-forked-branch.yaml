@@ -12,7 +12,7 @@ on:
 
 jobs:
   run-regression-tests:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: >
       github.event_name == 'push' ||
       (
@@ -82,7 +82,7 @@ jobs:
 
   comment-pr:
     name: Regression Test - comment on PR
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: run-regression-tests
     if: >
         github.event_name == 'pull_request' &&
