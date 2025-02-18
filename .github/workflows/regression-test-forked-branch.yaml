@@ -8,7 +8,7 @@ on:
   pull_request:
     types: [labeled, opened, reopened, synchronize]
     branches:
-      - tests/workflow-test
+      - remote-pre-merge-tests
 
 jobs:
   run-regression-tests:
